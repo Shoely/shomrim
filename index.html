@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no, initial-scale=1.0">
+    <title>Shomrim</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Community safety and incident management system">
+    <meta name="theme-color" content="#1E88E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Shomrim">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="assets/img/shomrim_logo.png">
+    <link rel="apple-touch-icon" href="assets/img/shomrim_logo.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="screen active">
+        <div class="splash-content">
+            <div class="splash-logo">
+                <img src="assets/img/shomrim_logo.png" alt="Shomrim" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="logo-fallback" style="display:none;">
+                    <div class="logo-icon">S</div>
+                </div>
+            </div>
+            <div class="splash-text">Shomrim</div>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="login-logo">
+                    <img src="assets/img/shomrim_logo.png" alt="Shomrim" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="logo-fallback" style="display:none;">
+                        <div class="logo-icon-small">S</div>
+                    </div>
+                </div>
+                <h1>Log in to</h1>
+                <h2>Shomrim</h2>
+            </div>
+            <div class="login-form">
+                <label>Please enter your mobile number</label>
+                <div class="phone-input-group">
+                    <div class="country-code">
+                        <select id="country-code">
+                            <option value="+44">🇬🇧 +44</option>
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+972">🇮🇱 +972</option>
+                        </select>
+                    </div>
+                    <input type="tel" id="phone-number" placeholder="Mobile Number" maxlength="11">
+                </div>
+                <button class="btn-primary" id="btn-login">Submit</button>
+                <p class="change-number-link">Changed your mobile number?</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- OTP Screen -->
+    <div id="otp-screen" class="screen">
+        <div class="otp-container">
+            <div class="otp-header">
+                <h2>We need additional information to confirm it's really you.</h2>
+                <p>Please enter the code sent to your mobile</p>
+                <p class="sms-label">via SMS.</p>
+            </div>
+            
+            <!-- Development Mode OTP Display -->
+            <div id="dev-otp-display" style="display:none; background: #4CAF50; color: white; padding: 15px; margin: 20px 0; border-radius: 8px; text-align: center;">
+                <p style="margin: 0 0 5px 0; font-size: 14px;">Development Mode - Your OTP:</p>
+                <h1 id="dev-otp-code" style="margin: 0; font-size: 32px; letter-spacing: 8px; font-weight: 700;"></h1>
+                <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">Check the server console for OTP code</p>
+            </div>
+            
+            <div class="otp-inputs">
+                <input type="tel" maxlength="1" class="otp-digit" data-index="0">
+                <input type="tel" maxlength="1" class="otp-digit" data-index="1">
+                <input type="tel" maxlength="1" class="otp-digit" data-index="2">
+                <input type="tel" maxlength="1" class="otp-digit" data-index="3">
+                <input type="tel" maxlength="1" class="otp-digit" data-index="4">
+                <input type="tel" maxlength="1" class="otp-digit" data-index="5">
+            </div>
+            <p class="resend-otp">Don't receive the OTP? <a href="#" id="resend-otp">Resend OTP</a></p>
+        </div>
+    </div>
+
+    <!-- Registration Screen -->
+    <div id="registration-screen" class="screen">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>Complete Registration</h1>
+                <p>Please provide your details</p>
+            </div>
+            <div class="login-form">
+                <label>Full Name *</label>
+                <input type="text" id="reg-name" placeholder="Enter your full name" required>
+                
+                <label>Email Address *</label>
+                <input type="email" id="reg-email" placeholder="Enter your email" required>
+                
+                <label>Unit Number / Callsign *</label>
+                <input type="text" id="reg-callsign" placeholder="e.g., S36" required>
+                
+                <label>Role</label>
+                <select id="reg-role">
+                    <option value="Member">Member</option>
+                    <option value="Dispatcher">Dispatcher</option>
+                    <option value="Coordinator">Coordinator</option>
+                    <option value="Admin">Admin</option>
+                </select>
+                
+                <button class="btn-primary" id="btn-register">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Passcode Setup Screen -->
+    <div id="passcode-screen" class="screen">
+        <div class="passcode-container">
+            <h2 id="passcode-title">Set Passcode</h2>
+            <p>Please set up a 4-digit passcode for this device</p>
+            <div class="passcode-dots">
+                <div class="passcode-dot"></div>
+                <div class="passcode-dot"></div>
+                <div class="passcode-dot"></div>
+                <div class="passcode-dot"></div>
+            </div>
+            <div class="numpad">
+                <button class="numpad-btn" data-num="1">1</button>
+                <button class="numpad-btn" data-num="2">2</button>
+                <button class="numpad-btn" data-num="3">3</button>
+                <button class="numpad-btn" data-num="4">4</button>
+                <button class="numpad-btn" data-num="5">5</button>
+                <button class="numpad-btn" data-num="6">6</button>
+                <button class="numpad-btn" data-num="7">7</button>
+                <button class="numpad-btn" data-num="8">8</button>
+                <button class="numpad-btn" data-num="9">9</button>
+                <button class="numpad-btn" data-num=""></button>
+                <button class="numpad-btn" data-num="0">0</button>
+                <button class="numpad-btn numpad-delete" data-num="del">
+                    <span class="material-icons-round">backspace</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Face Capture Screen -->
+    <div id="face-screen" class="screen">
+        <div class="face-container">
+            <h2>Part of Our Security Procedure</h2>
+            <p>Please capture and upload an image of your face for security purposes</p>
+            <div class="face-capture-area">
+                <div class="face-placeholder">
+                    <span class="material-icons-round">person</span>
+                </div>
+                <img id="face-preview" src="" alt="Face preview" style="display:none;">
+            </div>
+            <div class="face-buttons">
+                <button class="btn-outline" id="btn-take-photo">
+                    <span class="material-icons-round">photo_camera</span>
+                    Take Photo
+                </button>
+                <button class="btn-outline" id="btn-choose-gallery">
+                    <span class="material-icons-round">photo_library</span>
+                    Choose from Gallery
+                </button>
+            </div>
+            <button class="btn-primary" id="btn-continue-face">Continue</button>
+            <input type="file" id="face-file-input" accept="image/*" style="display:none;">
+        </div>
+    </div>
+
+    <!-- Main App Screen -->
+    <div id="main-screen" class="screen">
+        <!-- App Header -->
+        <header class="app-header">
+            <button class="header-btn menu-btn" id="btn-menu">
+                <span class="material-icons-round">menu</span>
+            </button>
+            <div class="header-tabs">
+                <button class="tab-btn active" data-tab="me">Me</button>
+                <button class="tab-btn" data-tab="global">Global</button>
+            </div>
+            <button class="header-btn notification-btn" id="btn-notifications">
+                <span class="material-icons-round">notifications</span>
+                <span class="notification-badge" id="notification-count">3</span>
+            </button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- User Profile Card -->
+            <div class="user-card">
+                <div class="user-avatar">
+                    <img src="assets/img/placeholder-user.png" alt="User" id="user-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="avatar-fallback" style="display:none;"></div>
+                </div>
+                <div class="user-info">
+                    <div class="user-name-row">
+                        <span class="user-name" id="user-name">Yehuda Filip</span>
+                        <span class="user-callsign" id="user-callsign">S36</span>
+                    </div>
+                    <div class="user-email-row">
+                        <span class="status-dot online"></span>
+                        <span class="user-email" id="user-email">yfilip@gmail.com</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patrol/Duty Toggle -->
+            <div class="status-toggles">
+                <button class="status-toggle active" id="btn-patrol" data-status="patrol">
+                    On Patrol
+                </button>
+                <button class="status-toggle" id="btn-duty" data-status="duty">
+                    On Duty
+                </button>
+            </div>
+
+            <!-- Dashboard Cards -->
+            <div class="dashboard-grid">
+                <div class="dashboard-card card-onair" data-filter="onair">
+                    <div class="card-content">
+                        <span class="card-count" id="count-onair">0</span>
+                        <span class="card-label">OnAir</span>
+                    </div>
+                    <div class="card-icon">
+                        <span class="material-icons-round">directions_run</span>
+                    </div>
+                </div>
+                <div class="dashboard-card card-invitation" data-filter="invitation">
+                    <div class="card-content">
+                        <span class="card-count" id="count-invitation">1</span>
+                        <span class="card-label">Invitation Pending</span>
+                    </div>
+                    <div class="card-icon">
+                        <span class="material-icons-round">description</span>
+                    </div>
+                </div>
+                <div class="dashboard-card card-pending" data-filter="pending">
+                    <div class="card-content">
+                        <span class="card-count" id="count-pending">1</span>
+                        <span class="card-label">Pending</span>
+                    </div>
+                    <div class="card-icon">
+                        <span class="material-icons-round">description</span>
+                    </div>
+                </div>
+                <div class="dashboard-card card-started" data-filter="started">
+                    <div class="card-content">
+                        <span class="card-count" id="count-started">2</span>
+                        <span class="card-label">Started</span>
+                    </div>
+                    <div class="card-icon">
+                        <span class="material-icons-round">directions_run</span>
+                    </div>
+                </div>
+                <div class="dashboard-card card-completed" data-filter="completed">
+                    <div class="card-content">
+                        <span class="card-count" id="count-completed">18</span>
+                        <span class="card-label">Completed</span>
+                    </div>
+                    <div class="card-icon icon-circle green">
+                        <span class="material-icons-round">check</span>
+                    </div>
+                </div>
+                <div class="dashboard-card card-cancelled" data-filter="cancelled">
+                    <div class="card-content">
+                        <span class="card-count" id="count-cancelled">9</span>
+                        <span class="card-label">Cancelled</span>
+                    </div>
+                    <div class="card-icon">
+                        <span class="material-icons-round">close</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- FAB Button -->
+        <button class="fab" id="btn-fab">
+            <span class="material-icons-round">add</span>
+        </button>
+    </div>
+
+    <!-- Side Drawer -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <aside class="side-drawer" id="side-drawer">
+        <div class="drawer-header">
+            <div class="drawer-logo" style="position: absolute; top: 16px; right: 16px; width: 50px; height: 50px;">
+                <img src="assets/img/shomrim_logo.png" alt="Shomrim" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;" onerror="this.style.display='none';">
+            </div>
+            <div class="drawer-user-avatar">
+                <img src="assets/img/placeholder-user.png" alt="User" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="avatar-fallback" style="display:none;"></div>
+            </div>
+            <div class="drawer-user-info">
+                <span class="drawer-user-name">Yehuda Filip</span>
+                <span class="drawer-user-email">yfilip@gmail.com</span>
+            </div>
+        </div>
+        <nav class="drawer-nav">
+            <a href="#" class="drawer-item" data-page="notifications">
+                <span class="material-icons-round">notifications</span>
+                <span>Notifications</span>
+            </a>
+            <a href="#" class="drawer-item" data-page="contacts">
+                <span class="material-icons-round">contacts</span>
+                <span>Contacts</span>
+            </a>
+            <a href="#" class="drawer-item" data-page="suspect">
+                <span class="material-icons-round">person_search</span>
+                <span>Suspect</span>
+            </a>
+            <a href="#" class="drawer-item" data-page="on-duty">
+                <span class="material-icons-round">work</span>
+                <span>On Duty</span>
+            </a>
+            <a href="#" class="drawer-item" data-page="on-patrol">
+                <span class="material-icons-round">directions_car</span>
+                <span>On Patrol</span>
+            </a>
+            <a href="#" class="drawer-item" data-page="dispatcher">
+                <span class="material-icons-round">headset_mic</span>
+                <span>Dispatcher</span>
+            </a>
+            <a href="#" class="drawer-item" data-page="supervisors">
+                <span class="material-icons-round">supervisor_account</span>
+                <span>Supervisors</span>
+            </a>
+            <a href="#" class="drawer-item" data-page="responders">
+                <span class="material-icons-round">groups</span>
+                <span>Responders</span>
+            </a>
+            <a href="#" class="drawer-item" data-page="vehicle">
+                <span class="material-icons-round">local_shipping</span>
+                <span>Vehicle</span>
+            </a>
+            <a href="#" class="drawer-item" data-page="settings">
+                <span class="material-icons-round">settings</span>
+                <span>Settings</span>
+            </a>
+            
+            <!-- Admin Panel (only visible for Admin/Dispatcher roles) -->
+            <a href="#" class="drawer-item" id="admin-menu-item" data-page="admin" style="display:none; background: linear-gradient(90deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%); border-left: 4px solid #667eea;">
+                <span class="material-icons-round" style="color: #667eea;">admin_panel_settings</span>
+                <span style="color: #667eea; font-weight: 600;">Admin Panel</span>
+            </a>
+            
+            <div class="drawer-divider"></div>
+            <a href="#" class="drawer-item logout" id="btn-logout">
+                <span class="material-icons-round">logout</span>
+                <span>Logout</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Notifications Panel -->
+    <div class="notifications-panel" id="notifications-panel">
+        <div class="notifications-header">
+            <h3>Notifications</h3>
+            <button class="clear-all-btn" id="btn-clear-notifications">Clear All</button>
+        </div>
+        <div class="notifications-list" id="notifications-list">
+            <div class="notification-item unread">
+                <div class="notification-icon">
+                    <span class="material-icons-round">warning</span>
+                </div>
+                <div class="notification-content">
+                    <p class="notification-title">New Incident Request</p>
+                    <p class="notification-message">You have been assigned to incident #1234</p>
+                    <span class="notification-time">2 min ago</span>
+                </div>
+            </div>
+            <div class="notification-item unread">
+                <div class="notification-icon">
+                    <span class="material-icons-round">person_add</span>
+                </div>
+                <div class="notification-content">
+                    <p class="notification-title">Invitation Pending</p>
+                    <p class="notification-message">David K. invited you to incident #1235</p>
+                    <span class="notification-time">15 min ago</span>
+                </div>
+            </div>
+            <div class="notification-item">
+                <div class="notification-icon">
+                    <span class="material-icons-round">check_circle</span>
+                </div>
+                <div class="notification-content">
+                    <p class="notification-title">Incident Completed</p>
+                    <p class="notification-message">Incident #1230 has been marked as completed</p>
+                    <span class="notification-time">1 hour ago</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incident List Screen -->
+    <div id="incidents-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-incidents">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title" id="incidents-title">Incidents</h1>
+            <button class="header-btn search-btn">
+                <span class="material-icons-round">search</span>
+            </button>
+        </header>
+        <div class="incidents-list" id="incidents-list">
+            <!-- Incidents will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Create Incident Screen -->
+    <div id="create-incident-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-create">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">Create Incident</h1>
+            <button class="header-btn" id="btn-save-incident">
+                <span class="material-icons-round">check</span>
+            </button>
+        </header>
+        <div class="form-content">
+            <div class="form-section">
+                <h3>Incident Info</h3>
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="incident-title" placeholder="Enter title">
+                </div>
+                <div class="form-group">
+                    <label>Incident Type</label>
+                    <select id="incident-type">
+                        <option value="">Select Incident Type</option>
+                        <option value="theft">Theft</option>
+                        <option value="vandalism">Vandalism</option>
+                        <option value="assault">Assault</option>
+                        <option value="suspicious">Suspicious Activity</option>
+                        <option value="emergency">Emergency</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="incident-description" placeholder="Add description..." rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Questions</label>
+                    <textarea id="incident-questions" placeholder="Add questions for responders..." rows="3"></textarea>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Incident Location</h3>
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" id="incident-address" placeholder="Search Address">
+                </div>
+                <div class="form-group">
+                    <label>Post Code</label>
+                    <input type="text" id="incident-postcode" placeholder="Enter Post Code">
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Caller Info</h3>
+                <button type="button" class="form-section-btn" onclick="toggleCallerSection()">
+                    <span class="material-icons-round">person</span>
+                    Add Caller
+                </button>
+                <div id="caller-section" style="display:none; margin-top:12px;">
+                    <div class="form-group">
+                        <label>Caller Name</label>
+                        <input type="text" id="caller-name" placeholder="Enter name">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="caller-phone" placeholder="Enter phone number">
+                    </div>
+                    <div class="form-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="caller-is-victim">
+                            <span>Caller is victim</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="caller-is-witness">
+                            <span>Caller is witness</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Victims</h3>
+                <button type="button" class="form-section-btn" onclick="addVictim()">
+                    <span class="material-icons-round">person_add</span>
+                    Add Victim
+                </button>
+                <div id="victims-list"></div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Witnesses</h3>
+                <button type="button" class="form-section-btn" onclick="addWitness()">
+                    <span class="material-icons-round">visibility</span>
+                    Add Witness
+                </button>
+                <div id="witnesses-list"></div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Suspects</h3>
+                <button type="button" class="form-section-btn" onclick="addSuspectToIncident()">
+                    <span class="material-icons-round">person_search</span>
+                    Add Suspect
+                </button>
+                <div id="suspects-list"></div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Vehicle Information</h3>
+                <button type="button" class="form-section-btn" onclick="toggleVehicleSection()">
+                    <span class="material-icons-round">local_shipping</span>
+                    Add Vehicle
+                </button>
+                <div id="vehicle-section" style="display:none; margin-top:12px;">
+                    <div class="form-group">
+                        <label>Registration</label>
+                        <input type="text" id="vehicle-registration" placeholder="Enter registration">
+                    </div>
+                    <div class="form-group">
+                        <label>Make & Model</label>
+                        <input type="text" id="vehicle-make-model" placeholder="e.g., Toyota Camry">
+                    </div>
+                    <div class="form-group">
+                        <label>Color</label>
+                        <input type="text" id="vehicle-color" placeholder="Enter color">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Assignment</h3>
+                <button type="button" class="form-section-btn" onclick="assignUser()">
+                    <span class="material-icons-round">person_add</span>
+                    Assigned User
+                </button>
+                <div id="assigned-users-list"></div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Police Information</h3>
+                <button type="button" class="form-section-btn" onclick="togglePoliceSection()">
+                    <span class="material-icons-round">local_police</span>
+                    Police Info
+                </button>
+                <div id="police-section" style="display:none; margin-top:12px;">
+                    <div class="form-group">
+                        <label>CAD Reference</label>
+                        <input type="text" id="police-cad" placeholder="Enter CAD reference">
+                    </div>
+                    <div class="form-group">
+                        <label>CRIS Reference</label>
+                        <input type="text" id="police-cris" placeholder="Enter CRIS reference">
+                    </div>
+                    <div class="form-group">
+                        <label>Officer Name</label>
+                        <input type="text" id="police-officer" placeholder="Enter officer name">
+                    </div>
+                    <div class="form-group">
+                        <label>Officer Badge</label>
+                        <input type="text" id="police-badge" placeholder="Enter badge number">
+                    </div>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="report-to-police">
+                        <span>Report to Police</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Follow-up</h3>
+                <div class="form-group">
+                    <label>Follow-up Description</label>
+                    <textarea id="incident-followup" placeholder="Add follow-up notes..." rows="3"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incident Detail Screen -->
+    <div id="incident-detail-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-detail">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">Incident Details</h1>
+            <button class="header-btn">
+                <span class="material-icons-round">more_vert</span>
+            </button>
+        </header>
+        <div class="detail-content" id="detail-content">
+            <!-- Detail content loaded dynamically -->
+        </div>
+        <div class="detail-actions">
+            <button class="action-btn btn-assign" id="btn-assign-incident">
+                <span class="material-icons-round">person_add</span>
+                Assign
+            </button>
+            <button class="action-btn btn-start" id="btn-start-incident">
+                <span class="material-icons-round">play_arrow</span>
+                Start
+            </button>
+            <button class="action-btn btn-complete" id="btn-complete-incident">
+                <span class="material-icons-round">check</span>
+                Complete
+            </button>
+        </div>
+        <button class="notes-fab" id="btn-notes">
+            <span class="material-icons-round">note_add</span>
+            Notes
+        </button>
+    </div>
+
+    <!-- Contacts Screen -->
+    <div id="contacts-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-contacts">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">Contacts</h1>
+            <button class="header-btn" id="btn-add-contact">
+                <span class="material-icons-round">person_add</span>
+            </button>
+        </header>
+        <div class="search-bar">
+            <span class="material-icons-round">search</span>
+            <input type="text" id="contacts-search" placeholder="Search contacts">
+        </div>
+        <div class="contacts-list" id="contacts-list">
+            <!-- Contacts will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Profile Screen -->
+    <div id="profile-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-profile">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">My Profile</h1>
+            <button class="header-btn" id="btn-edit-profile">
+                <span class="material-icons-round">edit</span>
+            </button>
+        </header>
+        <div class="profile-content">
+            <div class="profile-avatar-section">
+                <div class="profile-avatar-large">
+                    <img src="assets/img/placeholder-user.png" alt="User" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="avatar-fallback large" style="display:none;"></div>
+                </div>
+                <h2 class="profile-name" id="profile-name">Yehuda Filip</h2>
+                <p class="profile-callsign" id="profile-callsign">S36</p>
+            </div>
+            <div class="profile-section">
+                <h3>Personal Information</h3>
+                <div class="profile-field">
+                    <span class="field-label">Name</span>
+                    <span class="field-value" id="profile-field-name">Yehuda Filip</span>
+                </div>
+                <div class="profile-field">
+                    <span class="field-label">Email</span>
+                    <span class="field-value" id="profile-field-email">yfilip@gmail.com</span>
+                </div>
+                <div class="profile-field">
+                    <span class="field-label">Phone</span>
+                    <span class="field-value" id="profile-field-phone">+44 7911 123456</span>
+                </div>
+            </div>
+            <div class="profile-section">
+                <h3>Account Details</h3>
+                <div class="profile-field">
+                    <span class="field-label">Call Sign</span>
+                    <span class="field-value" id="profile-field-callsign">S36</span>
+                </div>
+                <div class="profile-field">
+                    <span class="field-label">Role</span>
+                    <span class="field-value" id="profile-field-role">Dispatcher</span>
+                </div>
+            </div>
+            <div class="profile-section">
+                <h3>Security</h3>
+                <div class="profile-field clickable">
+                    <span class="field-label">Change Password</span>
+                    <span class="material-icons-round">chevron_right</span>
+                </div>
+                <div class="profile-field">
+                    <span class="field-label">Fingerprint unlock</span>
+                    <label class="switch">
+                        <input type="checkbox" id="fingerprint-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settings-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-settings">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">Settings</h1>
+        </header>
+        <div class="settings-content">
+            <div class="settings-section">
+                <h3>General</h3>
+                <div class="settings-item">
+                    <span>Notifications</span>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="settings-item">
+                    <span>Sound</span>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="settings-item">
+                    <span>Vibration</span>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>Security</h3>
+                <div class="settings-item clickable">
+                    <span>Change Passcode</span>
+                    <span class="material-icons-round">chevron_right</span>
+                </div>
+                <div class="settings-item">
+                    <span>Biometric Authentication</span>
+                    <label class="switch">
+                        <input type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>About</h3>
+                <div class="settings-item">
+                    <span>Version</span>
+                    <span class="settings-value">1.0.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Duty Schedule Screen -->
+    <div id="schedule-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-schedule">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">Duty Schedule</h1>
+        </header>
+        <div class="schedule-content">
+            <div class="schedule-empty">
+                <span class="material-icons-round">event_busy</span>
+                <p>No schedule found!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- On Duty Screen -->
+    <div id="on-duty-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-onduty">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">On Duty</h1>
+            <button class="header-btn" onclick="refreshOnDuty()">
+                <span class="material-icons-round">refresh</span>
+            </button>
+        </header>
+        
+        <div class="list-content">
+            <div class="on-duty-controls" style="padding: 16px; background: white; border-bottom: 1px solid #e0e0e0;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="margin: 0 0 4px 0;">Your Status</h3>
+                        <p style="margin: 0; color: #666; font-size: 14px;" id="duty-status-text">Currently Off Duty</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="duty-toggle" onchange="toggleDutyStatus()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div id="on-duty-list" class="users-list"></div>
+        </div>
+    </div>
+
+    <!-- On Patrol Screen -->
+    <div id="on-patrol-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-onpatrol">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">On Patrol</h1>
+            <button class="header-btn" onclick="refreshOnPatrol()">
+                <span class="material-icons-round">refresh</span>
+            </button>
+        </header>
+        
+        <div class="list-content">
+            <div class="on-patrol-controls" style="padding: 16px; background: white; border-bottom: 1px solid #e0e0e0;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="margin: 0 0 4px 0;">Your Status</h3>
+                        <p style="margin: 0; color: #666; font-size: 14px;" id="patrol-status-text">Currently Not On Patrol</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="patrol-toggle" onchange="togglePatrolStatus()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div id="on-patrol-list" class="users-list"></div>
+        </div>
+    </div>
+
+    <!-- Dispatcher Screen -->
+    <div id="dispatcher-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-dispatcher">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">Dispatchers</h1>
+            <button class="header-btn" onclick="refreshDispatchers()">
+                <span class="material-icons-round">refresh</span>
+            </button>
+        </header>
+        
+        <div class="list-content">
+            <div id="dispatcher-list" class="users-list"></div>
+        </div>
+    </div>
+
+    <!-- Supervisors Screen -->
+    <div id="supervisors-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-supervisors">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">Supervisors</h1>
+            <button class="header-btn" onclick="refreshSupervisors()">
+                <span class="material-icons-round">refresh</span>
+            </button>
+        </header>
+        
+        <div class="list-content">
+            <div id="supervisors-list" class="users-list"></div>
+        </div>
+    </div>
+
+    <!-- Responders Screen -->
+    <div id="responders-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-responders">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">Responders</h1>
+            <button class="header-btn" onclick="refreshResponders()">
+                <span class="material-icons-round">refresh</span>
+            </button>
+        </header>
+        
+        <div class="list-content">
+            <div id="responders-list" class="users-list"></div>
+        </div>
+    </div>
+
+    <!-- Suspect Screen -->
+    <div id="suspect-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-suspect">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">Suspects</h1>
+            <button class="header-btn" onclick="showAddSuspect()">
+                <span class="material-icons-round">add</span>
+            </button>
+        </header>
+        
+        <div class="list-content">
+            <div id="suspect-list" class="suspects-list"></div>
+        </div>
+    </div>
+
+    <!-- Vehicle Screen -->
+    <div id="vehicle-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-vehicle">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">Vehicles</h1>
+            <button class="header-btn" onclick="showAddVehicle()">
+                <span class="material-icons-round">add</span>
+            </button>
+        </header>
+        
+        <div class="list-content">
+            <div id="vehicle-list" class="vehicles-list"></div>
+        </div>
+    </div>
+
+    <!-- Admin Panel Screen -->
+    <div id="admin-screen" class="screen">
+        <header class="page-header">
+            <button class="header-btn back-btn" id="btn-back-admin">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <h1 class="page-title">Admin Panel</h1>
+            <button class="header-btn">
+                <span class="material-icons-round">settings</span>
+            </button>
+        </header>
+        
+        <div class="admin-content" style="padding: 16px;">
+            <!-- Statistics Cards -->
+            <div class="admin-stats" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px;">
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px;">
+                    <h3 style="margin: 0; font-size: 32px; font-weight: 700;" id="admin-total-users">0</h3>
+                    <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Total Users</p>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 12px;">
+                    <h3 style="margin: 0; font-size: 32px; font-weight: 700;" id="admin-total-incidents">0</h3>
+                    <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Total Incidents</p>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; border-radius: 12px;">
+                    <h3 style="margin: 0; font-size: 32px; font-weight: 700;" id="admin-active-incidents">0</h3>
+                    <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Active Incidents</p>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; padding: 20px; border-radius: 12px;">
+                    <h3 style="margin: 0; font-size: 32px; font-weight: 700;" id="admin-total-contacts">0</h3>
+                    <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Total Contacts</p>
+                </div>
+            </div>
+
+            <!-- Admin Sections -->
+            <div class="admin-section" style="background: white; border-radius: 12px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h3 style="padding: 16px; margin: 0; border-bottom: 1px solid #e0e0e0; font-size: 16px;">User Management</h3>
+                <div class="admin-item" onclick="showAllUsers()" style="padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f5f5f5;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="material-icons-round" style="color: #667eea;">people</span>
+                        <span>View All Users</span>
+                    </div>
+                    <span class="material-icons-round" style="color: #999;">chevron_right</span>
+                </div>
+                <div class="admin-item" onclick="showUserRoles()" style="padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f5f5f5;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="material-icons-round" style="color: #667eea;">admin_panel_settings</span>
+                        <span>Manage Roles & Permissions</span>
+                    </div>
+                    <span class="material-icons-round" style="color: #999;">chevron_right</span>
+                </div>
+            </div>
+
+            <div class="admin-section" style="background: white; border-radius: 12px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h3 style="padding: 16px; margin: 0; border-bottom: 1px solid #e0e0e0; font-size: 16px;">Incident Management</h3>
+                <div class="admin-item" onclick="showAllIncidents()" style="padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f5f5f5;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="material-icons-round" style="color: #f5576c;">warning</span>
+                        <span>View All Incidents</span>
+                    </div>
+                    <span class="material-icons-round" style="color: #999;">chevron_right</span>
+                </div>
+                <div class="admin-item" onclick="exportIncidents()" style="padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f5f5f5;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="material-icons-round" style="color: #f5576c;">download</span>
+                        <span>Export Incidents (CSV)</span>
+                    </div>
+                    <span class="material-icons-round" style="color: #999;">chevron_right</span>
+                </div>
+            </div>
+
+            <div class="admin-section" style="background: white; border-radius: 12px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h3 style="padding: 16px; margin: 0; border-bottom: 1px solid #e0e0e0; font-size: 16px;">System Settings</h3>
+                <div class="admin-item" onclick="viewDatabaseStats()" style="padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f5f5f5;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="material-icons-round" style="color: #00f2fe;">storage</span>
+                        <span>Database Statistics</span>
+                    </div>
+                    <span class="material-icons-round" style="color: #999;">chevron_right</span>
+                </div>
+                <div class="admin-item" onclick="viewActivityLog()" style="padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f5f5f5;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="material-icons-round" style="color: #00f2fe;">history</span>
+                        <span>Activity Log</span>
+                    </div>
+                    <span class="material-icons-round" style="color: #999;">chevron_right</span>
+                </div>
+                <div class="admin-item" onclick="backupDatabase()" style="padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="material-icons-round" style="color: #00f2fe;">backup</span>
+                        <span>Backup Database</span>
+                    </div>
+                    <span class="material-icons-round" style="color: #999;">chevron_right</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('ServiceWorker registered:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('ServiceWorker registration failed:', error);
+                    });
+            });
+        }
+        
+        // PWA install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button after user completes auth
+            setTimeout(() => {
+                if (deferredPrompt && localStorage.getItem('shomrim_user')) {
+                    showInstallPrompt();
+                }
+            }, 5000);
+        });
+        
+        function showInstallPrompt() {
+            if (!deferredPrompt) return;
+            
+            const shouldInstall = confirm('Install Shomrim app on your device for quick access?');
+            if (shouldInstall && deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+        
+        // Handle app installed
+        window.addEventListener('appinstalled', () => {
+            console.log('Shomrim PWA installed');
+            deferredPrompt = null;
+        });
+    </script>
+</body>
+</html>
