@@ -856,27 +856,30 @@ def get_online_users():
         
         # Get users based on channel filter
         if channel == 'dispatchers':
-            cursor.execute("SELECT name, callsign, role FROM users WHERE role = 'Dispatcher'")
+            cursor.execute("SELECT name, phone, callsign, role FROM users WHERE role = 'Dispatcher'")
         elif channel == 'coordinators':
-            cursor.execute("SELECT name, callsign, role FROM users WHERE role = 'Coordinator'")
+            cursor.execute("SELECT name, phone, callsign, role FROM users WHERE role = 'Coordinator'")
         elif channel == 'on-duty':
-            cursor.execute("SELECT name, callsign, role FROM users WHERE on_duty = 1")
+            cursor.execute("SELECT name, phone, callsign, role FROM users WHERE on_duty = 1")
         elif channel == 'on-patrol':
-            cursor.execute("SELECT name, callsign, role FROM users WHERE on_patrol = 1")
+            cursor.execute("SELECT name, phone, callsign, role FROM users WHERE on_patrol = 1")
         else:
             # Get all users
-            cursor.execute("SELECT name, callsign, role FROM users")
+            cursor.execute("SELECT name, phone, callsign, role FROM users")
         
         users = cursor.fetchall()
         conn.close()
         
         result = []
         for user in users:
-            result.append({
-                'name': user[0] or 'Unknown',
-                'callsign': user[1] or 'N/A',
-                'status': user[2] or 'Member'
-            })
+            user_data = {
+                'name': user[0] if user[0] else 'Unknown',
+                'phone': user[1] if user[1] else '',
+                'callsign': user[2] if user[2] else user[1][-4:] if user[1] else 'N/A',
+                'status': user[3] if user[3] else 'Member'
+            }
+            result.append(user_data)
+            print(f"   User: {user_data['name']} ({user_data['callsign']}) - {user_data['status']}")
         
         print(f"\n📻 PTT Users query - Channel: {channel}, Found: {len(result)} users")
         
