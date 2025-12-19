@@ -4,9 +4,10 @@
 const API_BASE_URL = window.location.origin;
 
 // Site password (in production, this should be server-validated)
-const SITE_PASSWORD = 'test123';
+const SITE_PASSWORD = '1234';
 
 console.log('API Base URL:', API_BASE_URL);
+console.log('Site password is: ' + SITE_PASSWORD);
 
 // Check if user already passed the password gate
 function checkSiteAccess() {
@@ -3827,8 +3828,6 @@ function displayPTTUsers(users) {
             <span class="ptt-user-online-dot" title="Signed up"></span>
         </div>`;
     }).join('');
-        </div>
-    `).join('');
 }
 
 // PTT Polling for incoming messages
