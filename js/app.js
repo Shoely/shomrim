@@ -3530,6 +3530,9 @@ let pttStream = null;
 let pttPollingInterval = null;
 let pttLastMessageId = 0;
 let pttMuted = false; // Mute incoming messages
+let pttIsRecording = false; // Track if user is currently holding talk button
+let pttPlayedMessageIds = new Set(); // Prevent duplicate plays
+let pttIsPlayingAudio = false; // Prevent multiple audio playing at once
 
 function openPTTModal() {
     const modal = document.getElementById('ptt-modal');
@@ -3606,6 +3609,10 @@ function closePTTModal() {
     overlay.classList.remove('active');
     stopPTT();
     stopPTTPolling();
+    // Reset tracking variables when closing modal
+    pttPlayedMessageIds.clear();
+    pttIsPlayingAudio = false;
+    pttIsRecording = false;
 }
 
 function setupPTTButton() {
@@ -3667,6 +3674,7 @@ async function startPTT() {
         
         // Start recording
         pttMediaRecorder.start();
+        pttIsRecording = true; // Mark that user is actively talking
         
         // Update UI
         talkButton.classList.add('recording');
@@ -3713,6 +3721,8 @@ function stopPTT() {
     const status = document.getElementById('ptt-status');
     const statusIcon = status.querySelector('.material-icons-round');
     const statusText = status.querySelector('p');
+    
+    pttIsRecording = false; // Mark that user stopped talking
     
     if (pttMediaRecorder && pttMediaRecorder.state === 'recording') {
         pttMediaRecorder.stop();
@@ -3835,8 +3845,8 @@ function startPTTPolling() {
     // Clear any existing polling
     stopPTTPolling();
     
-    // Start polling every 1 second for faster response
-    pttPollingInterval = setInterval(checkForPTTMessages, 1000);
+    // Start polling every 500ms for faster response (reduced from 1000ms)
+    pttPollingInterval = setInterval(checkForPTTMessages, 500);
     
     // Check immediately
     checkForPTTMessages();
@@ -3850,8 +3860,8 @@ function stopPTTPolling() {
 }
 
 async function checkForPTTMessages() {
-    // Skip if muted
-    if (pttMuted) return;
+    // Skip if muted or already playing audio
+    if (pttMuted || pttIsPlayingAudio) return;
     
     try {
         const channel = document.getElementById('ptt-channel-select').value;
@@ -3865,12 +3875,31 @@ async function checkForPTTMessages() {
             const data = await response.json();
             
             if (data.messages && data.messages.length > 0) {
-                console.log(`📻 Received ${data.messages.length} new PTT message(s)`);
+                // Filter out already played messages
+                const newMessages = data.messages.filter(msg => !pttPlayedMessageIds.has(msg.id));
                 
-                // Play each message
-                for (const message of data.messages) {
-                    await playPTTMessage(message);
-                    pttLastMessageId = Math.max(pttLastMessageId, message.id);
+                if (newMessages.length > 0) {
+                    console.log(`📻 Received ${newMessages.length} new PTT message(s)`);
+                    
+                    // Play each message sequentially (only once)
+                    for (const message of newMessages) {
+                        // Mark as played BEFORE playing to prevent duplicates
+                        pttPlayedMessageIds.add(message.id);
+                        pttLastMessageId = Math.max(pttLastMessageId, message.id);
+                        
+                        await playPTTMessage(message);
+                    }
+                    
+                    // Limit the Set size to prevent memory issues
+                    if (pttPlayedMessageIds.size > 100) {
+                        const idsArray = Array.from(pttPlayedMessageIds);
+                        pttPlayedMessageIds = new Set(idsArray.slice(-50));
+                    }
+                } else {
+                    // Update lastMessageId even if all messages were already played
+                    for (const message of data.messages) {
+                        pttLastMessageId = Math.max(pttLastMessageId, message.id);
+                    }
                 }
             }
         }
@@ -3899,6 +3928,14 @@ function togglePTTMute() {
 }
 
 async function playPTTMessage(message) {
+    // Prevent multiple audio playing at once
+    if (pttIsPlayingAudio) {
+        console.log('⏳ Audio already playing, skipping...');
+        return;
+    }
+    
+    pttIsPlayingAudio = true;
+    
     try {
         // Show notification
         const status = document.getElementById('ptt-status');
@@ -3916,8 +3953,9 @@ async function playPTTMessage(message) {
         
         const audio = new Audio(audioUrl);
         
-        // Haptic feedback
-        if (navigator.vibrate) {
+        // Only vibrate if user is NOT currently holding the talk button
+        // If they're recording, they're actively using PTT so no need to alert them
+        if (navigator.vibrate && !pttIsRecording) {
             navigator.vibrate([100, 50, 100]);
         }
         
@@ -3927,6 +3965,7 @@ async function playPTTMessage(message) {
         // Wait for audio to finish
         await new Promise((resolve) => {
             audio.onended = resolve;
+            audio.onerror = resolve; // Also resolve on error to prevent hanging
         });
         
         // Clean up
@@ -3941,6 +3980,8 @@ async function playPTTMessage(message) {
         
     } catch (error) {
         console.error('Error playing PTT message:', error);
+    } finally {
+        pttIsPlayingAudio = false;
     }
 }
 

@@ -6,10 +6,33 @@ from twilio.rest import Client
 import os
 from datetime import datetime, timedelta
 import json
+import threading
+import requests
+import time
 from database import get_db, row_to_dict, rows_to_list, init_db
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for all API endpoints
+
+# ============ KEEP-ALIVE PING TO PREVENT RENDER COLD STARTS ============
+def keep_alive():
+    """Ping the server every 14 minutes to prevent Render from sleeping"""
+    RENDER_URL = os.environ.get('RENDER_EXTERNAL_URL', '')
+    while True:
+        time.sleep(840)  # 14 minutes
+        if RENDER_URL:
+            try:
+                requests.get(f"{RENDER_URL}/api/health", timeout=30)
+                print(f"✅ Keep-alive ping sent at {datetime.now()}")
+            except Exception as e:
+                print(f"⚠️ Keep-alive ping failed: {e}")
+
+# Start keep-alive thread in production
+if os.environ.get('RENDER'):
+    keep_alive_thread = threading.Thread(target=keep_alive, daemon=True)
+    keep_alive_thread.start()
+    print("✅ Keep-alive thread started")
+# ========================================================================
 
 # Initialize database on startup
 try:
@@ -27,6 +50,12 @@ TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', 'YOUR_TWILIO_PHONE_H
 otp_storage = {}
 
 # PTT now uses database instead of memory
+
+# Health check endpoint for keep-alive pings
+@app.route('/api/health')
+def health_check():
+    """Health check endpoint - keeps server alive on Render"""
+    return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
 
 # Serve frontend files
 @app.route('/')
