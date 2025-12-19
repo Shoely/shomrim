@@ -902,13 +902,25 @@ def get_ptt_messages():
         conn = get_db()
         cursor = conn.cursor()
         
+        print(f"\n{'='*50}")
+        print(f"PTT QUERY - User: {user_phone}, Channel: {channel}, Since: {since_id}")
+        
         # Query messages newer than since_id, excluding user's own messages
-        cursor.execute('''
-            SELECT id, user_name, channel, created_at
-            FROM ptt_messages
-            WHERE id > ? AND user_phone != ? AND (channel = ? OR channel = 'all')
-            ORDER BY id
-        ''', (since_id, user_phone, channel))
+        # If channel is 'all', get ALL messages regardless of their channel
+        if channel == 'all':
+            cursor.execute('''
+                SELECT id, user_name, channel, created_at
+                FROM ptt_messages
+                WHERE id > ? AND user_phone != ?
+                ORDER BY id
+            ''', (since_id, user_phone))
+        else:
+            cursor.execute('''
+                SELECT id, user_name, channel, created_at
+                FROM ptt_messages
+                WHERE id > ? AND user_phone != ? AND (channel = ? OR channel = 'all')
+                ORDER BY id
+            ''', (since_id, user_phone, channel))
         
         new_messages = []
         for row in cursor.fetchall():
@@ -921,12 +933,8 @@ def get_ptt_messages():
         
         conn.close()
         
-        if new_messages:
-            print(f"\n{'='*50}")
-            print(f"PTT POLLING - Found {len(new_messages)} new messages")
-            print(f"PTT POLLING - Channel: {channel}")
-            print(f"PTT POLLING - Since ID: {since_id}")
-            print(f"{'='*50}\n")
+        print(f"PTT RESULT - Found {len(new_messages)} messages")
+        print(f"{'='*50}\n")
         
         return jsonify({
             'messages': new_messages,

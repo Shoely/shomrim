@@ -3657,21 +3657,33 @@ function stopPTT() {
 
 async function sendPTTAudio(audioBlob, channel) {
     try {
+        const userPhone = state.user.phone || state.user.email || '';
+        const userName = state.user.name || 'Unknown';
+        
+        console.log('📤 Sending PTT audio:', {
+            channel: channel,
+            user_phone: userPhone,
+            user_name: userName,
+            audio_size: audioBlob.size
+        });
+        
         const formData = new FormData();
         formData.append('audio', audioBlob, 'voice-message.webm');
         formData.append('channel', channel);
-        formData.append('user_phone', state.user.phone || state.user.email);
-        formData.append('user_name', state.user.name);
+        formData.append('user_phone', userPhone);
+        formData.append('user_name', userName);
         
         const response = await fetch(`${API_BASE_URL}/api/ptt/broadcast`, {
             method: 'POST',
             body: formData
         });
         
+        const result = await response.json();
+        
         if (response.ok) {
-            console.log('✅ Voice message sent successfully');
+            console.log('✅ Voice message sent successfully', result);
         } else {
-            console.error('❌ Failed to send voice message');
+            console.error('❌ Failed to send voice message', result);
         }
     } catch (error) {
         console.error('Error sending PTT audio:', error);
@@ -3753,12 +3765,16 @@ function stopPTTPolling() {
 async function checkForPTTMessages() {
     try {
         const channel = document.getElementById('ptt-channel-select').value;
-        const response = await fetch(
-            `${API_BASE_URL}/api/ptt/messages?user_phone=${encodeURIComponent(state.user.phone || state.user.email)}&channel=${channel}&since_id=${pttLastMessageId}`
-        );
+        const userPhone = state.user.phone || state.user.email || '';
+        
+        const url = `${API_BASE_URL}/api/ptt/messages?user_phone=${encodeURIComponent(userPhone)}&channel=${channel}&since_id=${pttLastMessageId}`;
+        console.log('📡 PTT Polling:', url);
+        
+        const response = await fetch(url);
         
         if (response.ok) {
             const data = await response.json();
+            console.log('📻 PTT Poll response:', data);
             
             if (data.messages && data.messages.length > 0) {
                 console.log(`📻 Received ${data.messages.length} new PTT message(s)`);
@@ -3769,6 +3785,8 @@ async function checkForPTTMessages() {
                     pttLastMessageId = Math.max(pttLastMessageId, message.id);
                 }
             }
+        } else {
+            console.error('PTT poll failed:', response.status);
         }
     } catch (error) {
         console.error('Error checking for PTT messages:', error);
