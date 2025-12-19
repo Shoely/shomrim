@@ -1,6 +1,6 @@
 // Service Worker for Shomrim PWA
 // Bump CACHE_NAME whenever you deploy important changes
-const CACHE_NAME = 'shomrim-v1.0.6';
+const CACHE_NAME = 'shomrim-v1.0.7';
 const urlsToCache = [
   '/',
   '/index.html',
