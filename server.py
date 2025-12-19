@@ -165,11 +165,6 @@ def verify_otp():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/health', methods=['GET'])
-def health():
-    """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'service': 'Shomrim OTP API'})
-
 # ========== USER ENDPOINTS ==========
 
 @app.route('/api/users', methods=['POST'])
