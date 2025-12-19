@@ -6,10 +6,13 @@ from twilio.rest import Client
 import os
 from datetime import datetime, timedelta
 import json
-from database import get_db, row_to_dict, rows_to_list
+from database import get_db, row_to_dict, rows_to_list, init_db
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for all API endpoints
+
+# Initialize database on startup
+init_db()
 
 # Twilio configuration - Get these from https://www.twilio.com/console
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', 'YOUR_ACCOUNT_SID_HERE')
