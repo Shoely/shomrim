@@ -3889,7 +3889,7 @@ function togglePTTMute() {
         muteIcon.textContent = 'volume_off';
         muteText.textContent = 'Unmute';
         muteBtn.classList.add('muted');
-        showToast('PTT muted - you won\\'t hear incoming messages');
+        showToast('PTT muted - you won\'t hear incoming messages');
     } else {
         muteIcon.textContent = 'volume_up';
         muteText.textContent = 'Mute';
