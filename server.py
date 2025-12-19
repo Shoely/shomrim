@@ -478,6 +478,8 @@ def health_check():
         return jsonify({
             'status': 'healthy',
             'service': 'Shomrim API',
+            'version': '1.0.1',
+            'deployed': '2024-12-19',
             'database': 'connected',
             'users': user_count,
             'ptt_messages': ptt_count
