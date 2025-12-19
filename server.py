@@ -6,8 +6,6 @@ from twilio.rest import Client
 import os
 from datetime import datetime, timedelta
 import json
-import threading
-import time
 from database import get_db, row_to_dict, rows_to_list, init_db
 
 app = Flask(__name__, static_folder='.', static_url_path='')
