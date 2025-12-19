@@ -3467,6 +3467,7 @@ let pttAudioChunks = [];
 let pttStream = null;
 let pttPollingInterval = null;
 let pttLastMessageId = 0;
+let pttMuted = false; // Mute incoming messages
 
 function openPTTModal() {
     const modal = document.getElementById('ptt-modal');
@@ -3474,10 +3475,28 @@ function openPTTModal() {
     modal.classList.add('active');
     overlay.classList.add('active');
     loadPTTUsers();
-    startPTTPolling();
+    
+    // Get the latest message ID so we don't play old messages
+    fetchLatestMessageId().then(() => {
+        startPTTPolling();
+    });
     
     // Automatically request microphone permission when opening PTT
     requestMicrophonePermissionOnOpen();
+}
+
+async function fetchLatestMessageId() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/ptt/latest-id`);
+        if (response.ok) {
+            const data = await response.json();
+            pttLastMessageId = data.latest_id || 0;
+            console.log(`📻 Starting from message ID: ${pttLastMessageId}`);
+        }
+    } catch (error) {
+        console.log('Could not fetch latest ID, starting from 0');
+        pttLastMessageId = 0;
+    }
 }
 
 async function requestMicrophonePermissionOnOpen() {
@@ -3748,8 +3767,8 @@ function startPTTPolling() {
     // Clear any existing polling
     stopPTTPolling();
     
-    // Start polling every 2 seconds
-    pttPollingInterval = setInterval(checkForPTTMessages, 2000);
+    // Start polling every 1 second for faster response
+    pttPollingInterval = setInterval(checkForPTTMessages, 1000);
     
     // Check immediately
     checkForPTTMessages();
@@ -3763,18 +3782,19 @@ function stopPTTPolling() {
 }
 
 async function checkForPTTMessages() {
+    // Skip if muted
+    if (pttMuted) return;
+    
     try {
         const channel = document.getElementById('ptt-channel-select').value;
         const userPhone = state.user.phone || state.user.email || '';
         
         const url = `${API_BASE_URL}/api/ptt/messages?user_phone=${encodeURIComponent(userPhone)}&channel=${channel}&since_id=${pttLastMessageId}`;
-        console.log('📡 PTT Polling:', url);
         
         const response = await fetch(url);
         
         if (response.ok) {
             const data = await response.json();
-            console.log('📻 PTT Poll response:', data);
             
             if (data.messages && data.messages.length > 0) {
                 console.log(`📻 Received ${data.messages.length} new PTT message(s)`);
@@ -3785,11 +3805,28 @@ async function checkForPTTMessages() {
                     pttLastMessageId = Math.max(pttLastMessageId, message.id);
                 }
             }
-        } else {
-            console.error('PTT poll failed:', response.status);
         }
     } catch (error) {
         console.error('Error checking for PTT messages:', error);
+    }
+}
+
+function togglePTTMute() {
+    pttMuted = !pttMuted;
+    const muteBtn = document.getElementById('ptt-mute-btn');
+    const muteIcon = muteBtn.querySelector('.material-icons-round');
+    const muteText = muteBtn.querySelector('span:last-child');
+    
+    if (pttMuted) {
+        muteIcon.textContent = 'volume_off';
+        muteText.textContent = 'Unmute';
+        muteBtn.classList.add('muted');
+        showToast('PTT muted - you won\\'t hear incoming messages');
+    } else {
+        muteIcon.textContent = 'volume_up';
+        muteText.textContent = 'Mute';
+        muteBtn.classList.remove('muted');
+        showToast('PTT unmuted');
     }
 }
 

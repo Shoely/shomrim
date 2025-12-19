@@ -930,6 +930,21 @@ def get_online_users():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/ptt/latest-id', methods=['GET'])
+def get_latest_ptt_id():
+    """Get the latest PTT message ID so new users don't hear old messages"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT MAX(id) FROM ptt_messages')
+        result = cursor.fetchone()
+        conn.close()
+        
+        latest_id = result[0] if result[0] else 0
+        return jsonify({'latest_id': latest_id})
+    except Exception as e:
+        return jsonify({'latest_id': 0})
+
 @app.route('/api/ptt/messages', methods=['GET'])
 def get_ptt_messages():
     """Get new PTT messages for the user"""
