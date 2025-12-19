@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import random
 import string
@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 import json
 from database import get_db, row_to_dict, rows_to_list
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend access
+app = Flask(__name__, static_folder='.', static_url_path='')
+CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for all API endpoints
 
 # Twilio configuration - Get these from https://www.twilio.com/console
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', 'YOUR_ACCOUNT_SID_HERE')
@@ -19,9 +19,25 @@ TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', 'YOUR_TWILIO_PHONE_H
 # In-memory OTP storage (in production, use Redis or database)
 otp_storage = {}
 
+# PTT message storage (in production, use Redis or database with expiry)
+ptt_messages = []
+ptt_message_id_counter = 0
+
+# Serve frontend files
+@app.route('/')
+def serve_index():
+    """Serve the main app page"""
+    return send_file('index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    """Serve static files"""
+    return send_from_directory('.', path)
+
 def generate_otp():
     """Generate a 6-digit OTP"""
-    return ''.join(random.choices(string.digits, k=6))
+    # Fixed OTP for testing
+    return '123456'
 
 @app.route('/api/send-otp', methods=['POST'])
 def send_otp():
@@ -91,6 +107,16 @@ def verify_otp():
         # Format phone number
         full_phone = f"{country_code}{phone_number}"
         
+        # Debug logging
+        print(f"\n{'='*50}")
+        print(f"VERIFY OTP - Phone: {full_phone}")
+        print(f"VERIFY OTP - Entered: '{entered_otp}' (type: {type(entered_otp)})")
+        print(f"VERIFY OTP - Storage keys: {list(otp_storage.keys())}")
+        if full_phone in otp_storage:
+            print(f"VERIFY OTP - Stored: '{otp_storage[full_phone]['otp']}' (type: {type(otp_storage[full_phone]['otp'])})")
+            print(f"VERIFY OTP - Match: {stored_data['otp'] == entered_otp}")
+        print(f"{'='*50}\n")
+        
         # Check if OTP exists
         if full_phone not in otp_storage:
             return jsonify({'error': 'No OTP found for this number'}), 404
@@ -102,14 +128,34 @@ def verify_otp():
             del otp_storage[full_phone]
             return jsonify({'error': 'OTP has expired'}), 400
         
-        # Verify OTP
-        if stored_data['otp'] == entered_otp:
+        # Verify OTP - convert both to strings and strip whitespace
+        if str(stored_data['otp']).strip() == str(entered_otp).strip():
             # OTP verified - remove from storage
             del otp_storage[full_phone]
-            return jsonify({
-                'success': True,
-                'message': 'OTP verified successfully'
-            })
+            
+            # Check if user already exists in database
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM users WHERE phone = ?', (full_phone,))
+            existing_user = cursor.fetchone()
+            conn.close()
+            
+            if existing_user:
+                # Returning user - return their data
+                user_data = row_to_dict(existing_user)
+                return jsonify({
+                    'success': True,
+                    'message': 'OTP verified successfully',
+                    'user': user_data,
+                    'is_returning_user': True
+                })
+            else:
+                # New user - no user data
+                return jsonify({
+                    'success': True,
+                    'message': 'OTP verified successfully',
+                    'is_returning_user': False
+                })
         else:
             return jsonify({'error': 'Invalid OTP'}), 400
             
@@ -746,6 +792,162 @@ def delete_vehicle(vehicle_id):
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/ptt/broadcast', methods=['POST'])
+def ptt_broadcast():
+    """Handle PTT voice message broadcast"""
+    global ptt_message_id_counter
+    try:
+        audio_file = request.files.get('audio')
+        channel = request.form.get('channel', 'all')
+        user_phone = request.form.get('user_phone')
+        user_name = request.form.get('user_name')
+        
+        if not audio_file:
+            return jsonify({'error': 'No audio file provided'}), 400
+        
+        # Read and store audio data
+        audio_data = audio_file.read()
+        
+        # Create message object
+        ptt_message_id_counter += 1
+        message = {
+            'id': ptt_message_id_counter,
+            'channel': channel,
+            'user_phone': user_phone,
+            'user_name': user_name,
+            'audio_data': audio_data,
+            'timestamp': datetime.now().isoformat(),
+            'content_type': audio_file.content_type or 'audio/webm'
+        }
+        
+        # Store message (keep last 50 messages)
+        ptt_messages.append(message)
+        if len(ptt_messages) > 50:
+            ptt_messages.pop(0)
+        
+        print(f"\n{'='*50}")
+        print(f"PTT BROADCAST - User: {user_name}")
+        print(f"PTT BROADCAST - Channel: {channel}")
+        print(f"PTT BROADCAST - Audio size: {len(audio_data)} bytes")
+        print(f"PTT BROADCAST - Message ID: {ptt_message_id_counter}")
+        print(f"{'='*50}\n")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Voice message broadcast to channel',
+            'channel': channel,
+            'message_id': ptt_message_id_counter
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/users/online', methods=['GET'])
+def get_online_users():
+    """Get list of online users for PTT"""
+    try:
+        channel = request.args.get('channel', 'all')
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get users based on channel filter
+        if channel == 'dispatchers':
+            cursor.execute("SELECT name, callsign, role FROM users WHERE role = 'Dispatcher'")
+        elif channel == 'coordinators':
+            cursor.execute("SELECT name, callsign, role FROM users WHERE role = 'Coordinator'")
+        elif channel == 'on-duty':
+            cursor.execute("SELECT name, callsign, role FROM users WHERE on_duty = 1")
+        elif channel == 'on-patrol':
+            cursor.execute("SELECT name, callsign, role FROM users WHERE on_patrol = 1")
+        else:
+            # Get all users
+            cursor.execute("SELECT name, callsign, role FROM users")
+        
+        users = cursor.fetchall()
+        conn.close()
+        
+        result = []
+        for user in users:
+            result.append({
+                'name': user[0] or 'Unknown',
+                'callsign': user[1] or 'N/A',
+                'status': user[2] or 'Member'
+            })
+        
+        print(f"\n📻 PTT Users query - Channel: {channel}, Found: {len(result)} users")
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ptt/messages', methods=['GET'])
+def get_ptt_messages():
+    """Get new PTT messages for the user"""
+    try:
+        user_phone = request.args.get('user_phone')
+        channel = request.args.get('channel', 'all')
+        since_id = int(request.args.get('since_id', 0))
+        
+        # Filter messages for this channel and after since_id
+        new_messages = []
+        for msg in ptt_messages:
+            # Skip own messages
+            if msg['user_phone'] == user_phone:
+                continue
+            
+            # Only messages after since_id
+            if msg['id'] <= since_id:
+                continue
+            
+            # Filter by channel
+            if channel != 'all' and msg['channel'] != channel:
+                continue
+            
+            new_messages.append({
+                'id': msg['id'],
+                'user_name': msg['user_name'],
+                'channel': msg['channel'],
+                'timestamp': msg['timestamp']
+            })
+        
+        return jsonify({
+            'messages': new_messages,
+            'count': len(new_messages)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ptt/audio/<int:message_id>', methods=['GET'])
+def get_ptt_audio(message_id):
+    """Get audio data for a specific PTT message"""
+    try:
+        # Find the message
+        message = None
+        for msg in ptt_messages:
+            if msg['id'] == message_id:
+                message = msg
+                break
+        
+        if not message:
+            return jsonify({'error': 'Message not found'}), 404
+        
+        # Return audio data
+        from flask import Response
+        return Response(
+            message['audio_data'],
+            mimetype=message['content_type'],
+            headers={
+                'Content-Disposition': f'inline; filename=ptt_{message_id}.webm',
+                'Cache-Control': 'no-cache'
+            }
+        )
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("\n" + "="*60)

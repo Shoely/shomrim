@@ -27,7 +27,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     
     <!-- Styles -->
-    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/app.css?v=1.1.0">
 </head>
 <body>
     <!-- Splash Screen -->
@@ -68,7 +68,7 @@
                     </div>
                     <input type="tel" id="phone-number" placeholder="Mobile Number" maxlength="11">
                 </div>
-                <button class="btn-primary" id="btn-login">Submit</button>
+                <button class="btn-primary" id="btn-login" onclick="handleLogin()">Submit</button>
                 <p class="change-number-link">Changed your mobile number?</p>
             </div>
         </div>
@@ -106,28 +106,54 @@
     <div id="registration-screen" class="screen">
         <div class="login-container">
             <div class="login-header">
+                <div class="registration-icon">
+                    <span class="material-icons-round">person_add</span>
+                </div>
                 <h1>Complete Registration</h1>
-                <p>Please provide your details</p>
+                <p>Please provide your details to continue</p>
             </div>
-            <div class="login-form">
-                <label>Full Name *</label>
-                <input type="text" id="reg-name" placeholder="Enter your full name" required>
+            <div class="login-form registration-form">
+                <div class="input-group">
+                    <span class="material-icons-round input-icon">person</span>
+                    <div class="input-wrapper">
+                        <label>Full Name *</label>
+                        <input type="text" id="reg-name" placeholder="Enter your full name" required>
+                    </div>
+                </div>
                 
-                <label>Email Address *</label>
-                <input type="email" id="reg-email" placeholder="Enter your email" required>
+                <div class="input-group">
+                    <span class="material-icons-round input-icon">email</span>
+                    <div class="input-wrapper">
+                        <label>Email Address *</label>
+                        <input type="email" id="reg-email" placeholder="Enter your email" required>
+                    </div>
+                </div>
                 
-                <label>Unit Number / Callsign *</label>
-                <input type="text" id="reg-callsign" placeholder="e.g., S36" required>
+                <div class="input-group">
+                    <span class="material-icons-round input-icon">badge</span>
+                    <div class="input-wrapper">
+                        <label>Unit Number / Callsign *</label>
+                        <input type="text" id="reg-callsign" placeholder="e.g., S36" required>
+                    </div>
+                </div>
                 
-                <label>Role</label>
-                <select id="reg-role">
-                    <option value="Member">Member</option>
-                    <option value="Dispatcher">Dispatcher</option>
-                    <option value="Coordinator">Coordinator</option>
-                    <option value="Admin">Admin</option>
-                </select>
+                <div class="input-group">
+                    <span class="material-icons-round input-icon">work</span>
+                    <div class="input-wrapper">
+                        <label>Role</label>
+                        <select id="reg-role">
+                            <option value="Member">Member</option>
+                            <option value="Dispatcher">Dispatcher</option>
+                            <option value="Coordinator">Coordinator</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
                 
-                <button class="btn-primary" id="btn-register">Continue</button>
+                <button class="btn-primary" id="btn-register">
+                    <span>Continue</span>
+                    <span class="material-icons-round">arrow_forward</span>
+                </button>
             </div>
         </div>
     </div>
@@ -184,7 +210,8 @@
                 </button>
             </div>
             <button class="btn-primary" id="btn-continue-face">Continue</button>
-            <input type="file" id="face-file-input" accept="image/*" style="display:none;">
+            <input type="file" id="face-camera-input" accept="image/*" capture="user" style="display:none;">
+            <input type="file" id="face-gallery-input" accept="image/*" style="display:none;">
         </div>
     </div>
 
@@ -298,6 +325,80 @@
         <button class="fab" id="btn-fab">
             <span class="material-icons-round">add</span>
         </button>
+
+        <!-- Push to Talk Button -->
+        <button class="ptt-button" id="btn-ptt">
+            <span class="material-icons-round ptt-icon">mic</span>
+            <span class="ptt-text">Push to Talk</span>
+        </button>
+    </div>
+
+    <!-- PTT Modal -->
+    <div class="ptt-overlay" id="ptt-overlay"></div>
+    <div class="ptt-modal" id="ptt-modal">
+        <div class="ptt-modal-header">
+            <h3>Push to Talk</h3>
+            <button class="header-btn" id="btn-close-ptt-modal">
+                <span class="material-icons-round">close</span>
+            </button>
+        </div>
+        <div class="ptt-modal-content">
+            <div class="ptt-channel-select">
+                <label>Select Channel:</label>
+                <select id="ptt-channel-select">
+                    <option value="all">All Units</option>
+                    <option value="dispatchers">Dispatchers Only</option>
+                    <option value="coordinators">Coordinators Only</option>
+                    <option value="on-duty">On Duty Members</option>
+                    <option value="on-patrol">On Patrol Members</option>
+                </select>
+            </div>
+            <div class="ptt-status" id="ptt-status">
+                <span class="material-icons-round">mic_off</span>
+                <p>Hold button below to speak</p>
+            </div>
+            <button class="ptt-talk-button" id="ptt-talk-button">
+                <span class="material-icons-round">mic</span>
+                <span>Hold to Talk</span>
+            </button>
+            <div class="ptt-active-users">
+                <h4>Active on Channel (<span id="ptt-user-count">0</span>)</h4>
+                <div class="ptt-users-list" id="ptt-users-list">
+                    <p class="ptt-no-users">No users currently active</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Microphone Permission Modal -->
+    <div class="mic-permission-overlay" id="mic-permission-overlay"></div>
+    <div class="mic-permission-modal" id="mic-permission-modal">
+        <div class="mic-permission-content">
+            <span class="material-icons-round mic-permission-icon">mic_off</span>
+            <h3>Allow Microphone Access</h3>
+            <p>Your browser will ask for microphone permission</p>
+            
+            <div class="mic-permission-steps">
+                <div class="permission-step">
+                    <span class="step-number">1</span>
+                    <p>When prompted, tap <strong>"Allow"</strong> to enable voice communication</p>
+                </div>
+                <div class="permission-step">
+                    <span class="step-number">2</span>
+                    <p>This is required by your browser for security - all radio apps need this</p>
+                </div>
+                <div class="permission-step">
+                    <span class="step-number">3</span>
+                    <p>You only need to do this once</p>
+                </div>
+            </div>
+            
+            <button class="btn-primary" id="btn-request-mic">
+                <span class="material-icons-round">mic</span>
+                <span>Grant Permission</span>
+            </button>
+            <button class="btn-secondary" id="btn-close-mic-permission">Cancel</button>
+        </div>
     </div>
 
     <!-- Side Drawer -->
@@ -373,10 +474,16 @@
     </aside>
 
     <!-- Notifications Panel -->
+    <div class="notifications-overlay" id="notifications-overlay"></div>
     <div class="notifications-panel" id="notifications-panel">
         <div class="notifications-header">
             <h3>Notifications</h3>
-            <button class="clear-all-btn" id="btn-clear-notifications">Clear All</button>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button class="clear-all-btn" id="btn-clear-notifications">Clear All</button>
+                <button class="header-btn" id="btn-close-notifications">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
         </div>
         <div class="notifications-list" id="notifications-list">
             <div class="notification-item unread">
@@ -1036,21 +1143,34 @@
         </div>
     </div>
 
-    <script src="js/app.js"></script>
+    <!-- Main App Script -->
+    <script src="js/app.js?v=1.1.0"></script>
+    
+    <!-- Fallback: Force splash to login transition -->
+    <script>
+        // This runs after app.js loads - backup transition if app.js fails
+        setTimeout(function() {
+            var splash = document.getElementById('splash-screen');
+            var login = document.getElementById('login-screen');
+            if (splash && splash.classList.contains('active')) {
+                console.log('Fallback: transitioning to login');
+                splash.classList.remove('active');
+                login.classList.add('active');
+            }
+        }, 2500);
+    </script>
     
     <!-- PWA Service Worker Registration -->
     <script>
-        // Register service worker
+        // Register service worker for PWA
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then((registration) => {
-                        console.log('ServiceWorker registered:', registration.scope);
-                    })
-                    .catch((error) => {
-                        console.log('ServiceWorker registration failed:', error);
-                    });
-            });
+            navigator.serviceWorker.register('sw.js')
+                .then(registration => {
+                    console.log('Service Worker registered');
+                })
+                .catch(error => {
+                    console.log('Service Worker registration failed:', error);
+                });
         }
         
         // PWA install prompt
@@ -1058,29 +1178,7 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            
-            // Show install button after user completes auth
-            setTimeout(() => {
-                if (deferredPrompt && localStorage.getItem('shomrim_user')) {
-                    showInstallPrompt();
-                }
-            }, 5000);
         });
-        
-        function showInstallPrompt() {
-            if (!deferredPrompt) return;
-            
-            const shouldInstall = confirm('Install Shomrim app on your device for quick access?');
-            if (shouldInstall && deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the install prompt');
-                    }
-                    deferredPrompt = null;
-                });
-            }
-        }
         
         // Handle app installed
         window.addEventListener('appinstalled', () => {

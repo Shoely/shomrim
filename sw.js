@@ -1,5 +1,6 @@
 // Service Worker for Shomrim PWA
-const CACHE_NAME = 'shomrim-v1.0.0';
+// Bump CACHE_NAME whenever you deploy important changes
+const CACHE_NAME = 'shomrim-v1.0.6';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -27,35 +28,31 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - network first, fallback to cache
+// This makes sure new versions of the app are loaded immediately
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then((response) => {
-        // Cache hit - return response
-        if (response) {
+        // Only cache valid same-origin responses
+        if (!response || response.status !== 200 || response.type !== 'basic') {
           return response;
         }
-        
-        // Clone the request
-        const fetchRequest = event.request.clone();
-        
-        return fetch(fetchRequest).then((response) => {
-          // Check if valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-          
-          // Clone the response
-          const responseToCache = response.clone();
-          
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          
-          return response;
+
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
         });
+
+        return response;
+      })
+      .catch(() => {
+        // If network fails, try cache
+        return caches.match(event.request);
       })
   );
 });

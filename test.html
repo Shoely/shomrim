@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shomrim - Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; min-height: 100vh; }
+        .screen { display: none; min-height: 100vh; }
+        .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        /* Splash */
+        #splash { background: linear-gradient(135deg, #1E88E5, #1565C0); color: white; }
+        .splash-logo { width: 120px; height: 120px; background: white; border-radius: 24px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+        .splash-logo img { width: 80px; height: 80px; }
+        .splash-text { font-size: 32px; font-weight: 700; }
+        
+        /* Login */
+        #login { background: white; padding: 20px; }
+        .login-box { width: 100%; max-width: 400px; padding: 40px 20px; }
+        .login-box h1 { color: #1E88E5; font-size: 28px; margin-bottom: 8px; }
+        .login-box h2 { color: #333; font-size: 24px; margin-bottom: 30px; }
+        .login-box label { display: block; color: #666; margin-bottom: 10px; }
+        .phone-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .phone-group select { padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        .phone-group input { flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        .btn { width: 100%; padding: 16px; background: #1E88E5; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+        .btn:hover { background: #1565C0; }
+        .btn:disabled { background: #ccc; }
+        
+        /* OTP */
+        #otp { background: white; padding: 20px; }
+        .otp-box { width: 100%; max-width: 400px; padding: 40px 20px; text-align: center; }
+        .otp-box h2 { color: #333; margin-bottom: 10px; }
+        .otp-box p { color: #666; margin-bottom: 30px; }
+        .otp-inputs { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        .otp-inputs input { width: 50px; height: 60px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; }
+        .otp-inputs input:focus { border-color: #1E88E5; outline: none; }
+        .dev-otp { background: #4CAF50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        
+        /* Main */
+        #main { background: #f5f5f5; }
+        .main-header { width: 100%; background: #1E88E5; color: white; padding: 20px; text-align: center; }
+        .main-content { padding: 20px; text-align: center; }
+        .main-content h2 { color: #333; margin-bottom: 20px; }
+        .logout-btn { background: #f44336; margin-top: 20px; max-width: 200px; }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splash" class="screen active">
+        <div class="splash-logo">
+            <img src="assets/img/shomrim_logo.png" alt="S" onerror="this.parentElement.innerHTML='<div style=font-size:48px;color:#1E88E5;font-weight:bold>S</div>'">
+        </div>
+        <div class="splash-text">Shomrim</div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login" class="screen">
+        <div class="login-box">
+            <h1>Log in to</h1>
+            <h2>Shomrim</h2>
+            <label>Please enter your mobile number</label>
+            <div class="phone-group">
+                <select id="countryCode">
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+972">🇮🇱 +972</option>
+                </select>
+                <input type="tel" id="phoneNumber" placeholder="Mobile Number" maxlength="11">
+            </div>
+            <button class="btn" id="btnLogin">Submit</button>
+        </div>
+    </div>
+
+    <!-- OTP Screen -->
+    <div id="otp" class="screen">
+        <div class="otp-box">
+            <h2>Verify OTP</h2>
+            <p>Enter the 6-digit code sent to your phone</p>
+            <div id="devOtp" class="dev-otp" style="display:none;">
+                <strong>TEST OTP:</strong> <span id="otpCode"></span>
+            </div>
+            <div class="otp-inputs">
+                <input type="text" maxlength="1" class="otp-digit" data-index="0">
+                <input type="text" maxlength="1" class="otp-digit" data-index="1">
+                <input type="text" maxlength="1" class="otp-digit" data-index="2">
+                <input type="text" maxlength="1" class="otp-digit" data-index="3">
+                <input type="text" maxlength="1" class="otp-digit" data-index="4">
+                <input type="text" maxlength="1" class="otp-digit" data-index="5">
+            </div>
+            <button class="btn" id="btnVerify">Verify</button>
+        </div>
+    </div>
+
+    <!-- Main Screen -->
+    <div id="main" class="screen">
+        <div class="main-header">
+            <h1>Shomrim App</h1>
+        </div>
+        <div class="main-content">
+            <h2>Welcome!</h2>
+            <p>You are now logged in.</p>
+            <button class="btn logout-btn" id="btnLogout">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        // API URL
+        const API = window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin;
+        
+        // Store phone for OTP verification
+        let currentPhone = '';
+        let currentCountry = '';
+
+        // Show screen helper
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // Splash -> Login after 2 seconds
+        setTimeout(() => showScreen('login'), 2000);
+
+        // Login button click
+        document.getElementById('btnLogin').addEventListener('click', async function() {
+            const phone = document.getElementById('phoneNumber').value;
+            const country = document.getElementById('countryCode').value;
+            
+            if (phone.length < 7) {
+                alert('Please enter a valid phone number');
+                return;
+            }
+
+            this.disabled = true;
+            this.textContent = 'Sending...';
+
+            try {
+                const response = await fetch(API + '/api/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone_number: phone, country_code: country })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentPhone = phone;
+                    currentCountry = country;
+                    
+                    // Show dev OTP if available
+                    if (data.dev_otp) {
+                        document.getElementById('devOtp').style.display = 'block';
+                        document.getElementById('otpCode').textContent = data.dev_otp;
+                    }
+                    
+                    showScreen('otp');
+                    document.querySelector('.otp-digit').focus();
+                } else {
+                    alert(data.error || 'Failed to send OTP');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to connect to server. Make sure server is running.');
+            }
+
+            this.disabled = false;
+            this.textContent = 'Submit';
+        });
+
+        // OTP input handling
+        document.querySelectorAll('.otp-digit').forEach((input, index, inputs) => {
+            input.addEventListener('input', function() {
+                if (this.value.length === 1 && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && !this.value && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+        });
+
+        // Verify OTP
+        document.getElementById('btnVerify').addEventListener('click', async function() {
+            const otp = Array.from(document.querySelectorAll('.otp-digit')).map(i => i.value).join('');
+            
+            if (otp.length !== 6) {
+                alert('Please enter all 6 digits');
+                return;
+            }
+
+            this.disabled = true;
+            this.textContent = 'Verifying...';
+
+            try {
+                const response = await fetch(API + '/api/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        phone_number: currentPhone, 
+                        country_code: currentCountry, 
+                        otp: otp 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showScreen('main');
+                } else {
+                    alert(data.error || 'Invalid OTP');
+                    document.querySelectorAll('.otp-digit').forEach(i => i.value = '');
+                    document.querySelector('.otp-digit').focus();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to verify OTP');
+            }
+
+            this.disabled = false;
+            this.textContent = 'Verify';
+        });
+
+        // Logout
+        document.getElementById('btnLogout').addEventListener('click', function() {
+            currentPhone = '';
+            currentCountry = '';
+            document.getElementById('phoneNumber').value = '';
+            document.querySelectorAll('.otp-digit').forEach(i => i.value = '');
+            document.getElementById('devOtp').style.display = 'none';
+            showScreen('login');
+        });
+    </script>
+</body>
+</html>

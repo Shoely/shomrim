@@ -68,7 +68,9 @@ body {
     background: var(--bg-white);
     display: none;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 .screen.active {
@@ -132,7 +134,7 @@ body {
 }
 
 .login-container {
-    flex: 1;
+    min-height: 100%;
     display: flex;
     flex-direction: column;
     padding: 60px 24px 40px;
@@ -187,17 +189,118 @@ body {
     margin-bottom: 16px;
 }
 
+/* Registration Form Enhancements */
+.registration-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--primary-blue), #1976d2);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    box-shadow: 0 8px 24px rgba(33, 150, 243, 0.3);
+}
+
+.registration-icon .material-icons-round {
+    font-size: 48px;
+    color: white;
+}
+
+.registration-form .input-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: 16px;
+    padding: 16px;
+    transition: all 0.3s ease;
+}
+
+.registration-form .input-group:focus-within {
+    border-color: var(--primary-blue);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15);
+    background: #fafafa;
+}
+
+.registration-form .input-icon {
+    font-size: 24px;
+    color: var(--primary-blue);
+    flex-shrink: 0;
+    margin-top: 8px;
+}
+
+.registration-form .input-wrapper {
+    flex: 1;
+    min-width: 0;
+}
+
+.registration-form .input-wrapper label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.registration-form .input-wrapper input,
+.registration-form .input-wrapper select {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    color: var(--text-dark);
+    padding: 0;
+    outline: none;
+}
+
+.registration-form .input-wrapper input::placeholder {
+    color: var(--text-light);
+}
+
+.registration-form .input-wrapper select {
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.registration-form .btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 32px;
+    height: 56px;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
+.registration-form .btn-primary:hover {
+    box-shadow: 0 6px 16px rgba(33, 150, 243, 0.4);
+    transform: translateY(-1px);
+}
+
+.registration-form .btn-primary .material-icons-round {
+    font-size: 20px;
+}
+
 .phone-input-group {
     display: flex;
     gap: 12px;
     margin-bottom: 24px;
+    width: 100%;
 }
 
 .country-code {
     flex-shrink: 0;
+    width: 120px;
 }
 
 .country-code select {
+    width: 100%;
     height: 56px;
     padding: 0 12px;
     border: 1px solid var(--border-light);
@@ -210,6 +313,7 @@ body {
 
 .phone-input-group input {
     flex: 1;
+    min-width: 0;
     height: 56px;
     padding: 0 16px;
     border: 1px solid var(--border-light);
@@ -829,6 +933,389 @@ body {
     color: white;
 }
 
+/* ===== Push to Talk Button ===== */
+.ptt-button {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 16px 32px;
+    border-radius: 50px;
+    background: linear-gradient(135deg, #FF6B35, #F7931E);
+    border: none;
+    box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 100;
+    transition: all 0.2s;
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+}
+
+.ptt-button:hover {
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 6px 24px rgba(255, 107, 53, 0.5);
+}
+
+.ptt-button:active {
+    transform: translateX(-50%) scale(0.98);
+}
+
+.ptt-icon {
+    font-size: 24px;
+}
+
+.ptt-text {
+    font-weight: 600;
+}
+
+/* PTT Modal */
+.ptt-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 300;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.ptt-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.ptt-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    background: var(--bg-white);
+    border-radius: 20px;
+    z-index: 301;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.ptt-modal.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.ptt-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.ptt-modal-header h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.ptt-modal-content {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.ptt-channel-select {
+    margin-bottom: 24px;
+}
+
+.ptt-channel-select label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-medium);
+    margin-bottom: 8px;
+}
+
+.ptt-channel-select select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    font-size: 16px;
+    color: var(--text-dark);
+    background: var(--bg-white);
+    cursor: pointer;
+}
+
+.ptt-status {
+    text-align: center;
+    padding: 24px;
+    background: var(--bg-light);
+    border-radius: 16px;
+    margin-bottom: 20px;
+}
+
+.ptt-status .material-icons-round {
+    font-size: 48px;
+    color: var(--text-light);
+    margin-bottom: 8px;
+}
+
+.ptt-status.recording .material-icons-round {
+    color: #FF6B35;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.ptt-status p {
+    font-size: 14px;
+    color: var(--text-medium);
+}
+
+.ptt-talk-button {
+    width: 100%;
+    padding: 20px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #FF6B35, #F7931E);
+    border: none;
+    box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    transition: all 0.2s;
+    margin-bottom: 24px;
+}
+
+.ptt-talk-button:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+}
+
+.ptt-talk-button:active,
+.ptt-talk-button.recording {
+    background: linear-gradient(135deg, #E55A2A, #E08316);
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.5);
+    transform: scale(0.98);
+}
+
+.ptt-talk-button .material-icons-round {
+    font-size: 28px;
+}
+
+.ptt-active-users h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-medium);
+    margin-bottom: 12px;
+}
+
+.ptt-users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ptt-user-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-light);
+    border-radius: 12px;
+}
+
+.ptt-user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary-blue);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.ptt-user-info {
+    flex: 1;
+}
+
+.ptt-user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+    display: block;
+}
+
+.ptt-user-status {
+    font-size: 12px;
+    color: var(--text-medium);
+}
+
+.ptt-no-users {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Microphone Permission Modal */
+.mic-permission-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 400;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.mic-permission-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.mic-permission-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 90%;
+    max-width: 400px;
+    background: var(--bg-white);
+    border-radius: 24px;
+    z-index: 401;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.mic-permission-modal.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.mic-permission-content {
+    padding: 32px 24px;
+    text-align: center;
+}
+
+.mic-permission-icon {
+    font-size: 64px;
+    color: #FF6B35;
+    margin-bottom: 16px;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.mic-permission-content h3 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+}
+
+.mic-permission-content > p {
+    font-size: 15px;
+    color: var(--text-medium);
+    margin-bottom: 24px;
+}
+
+.mic-permission-steps {
+    background: var(--bg-light);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+    text-align: left;
+}
+
+.permission-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.permission-step:last-child {
+    margin-bottom: 0;
+}
+
+.step-number {
+    width: 32px;
+    height: 32px;
+    background: var(--primary-blue);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.permission-step p {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-dark);
+    line-height: 1.5;
+    margin-top: 4px;
+}
+
+.mic-permission-content .btn-primary {
+    width: 100%;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.mic-permission-content .btn-secondary {
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-medium);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: background 0.2s;
+}
+
+.mic-permission-content .btn-secondary:hover {
+    background: var(--bg-light);
+}
+
 /* ===== Side Drawer ===== */
 .drawer-overlay {
     position: fixed;
@@ -956,6 +1443,24 @@ body {
 }
 
 /* ===== Notifications Panel ===== */
+.notifications-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 200;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.notifications-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
 .notifications-panel {
     position: fixed;
     top: 0;
@@ -969,6 +1474,7 @@ body {
     transition: transform 0.3s ease;
     display: flex;
     flex-direction: column;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
 }
 
 .notifications-panel.active {

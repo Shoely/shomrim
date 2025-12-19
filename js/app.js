@@ -1,9 +1,7 @@
 // ===== Shomrim App - Main JavaScript =====
 
-// API Configuration - Use current host IP instead of localhost
-const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'http://localhost:5000' 
-    : `http://${window.location.hostname}:5000`;
+// API Configuration - Auto-detect server URL
+const API_BASE_URL = window.location.origin;
 
 console.log('API Base URL:', API_BASE_URL);
 
@@ -90,22 +88,54 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initApp() {
-    // Show splash screen, then transition to login or main
-    setTimeout(async () => {
-        const savedUser = localStorage.getItem('shomrim_user');
-        if (savedUser) {
+    console.log('initApp starting...');
+    
+    // Check if user is already logged in
+    const savedUser = localStorage.getItem('shomrim_user');
+    const savedPasscode = localStorage.getItem('shomrim_passcode');
+    
+    try {
+        if (savedUser && savedPasscode) {
+            // User has logged in before - restore session
             state.user = JSON.parse(savedUser);
             state.isLoggedIn = true;
             
-            // Load incidents from database
-            await loadIncidents();
+            console.log('Restoring user session:', state.user.name);
             
-            showScreen('main-screen');
-            updateUI();
+            setTimeout(() => {
+                // Update UI with user data
+                const drawerName = document.querySelector('.drawer-user-name');
+                const drawerEmail = document.querySelector('.drawer-user-email');
+                if (drawerName) drawerName.textContent = state.user.name;
+                if (drawerEmail) drawerEmail.textContent = state.user.email;
+                
+                // Update avatar if available
+                if (state.user.avatar) {
+                    updateAvatarDisplays(state.user.avatar);
+                }
+                
+                // Load user's incidents
+                loadIncidents();
+                
+                // Go directly to main screen
+                showScreen('main-screen');
+                updateUI();
+                console.log('Session restored successfully');
+            }, 2000);
         } else {
-            showScreen('login-screen');
+            // New user - show login
+            setTimeout(() => {
+                console.log('Transitioning to login screen...');
+                showScreen('login-screen');
+                console.log('Login screen shown');
+            }, 2000);
         }
-    }, 2000);
+    } catch (error) {
+        console.error('Error in initApp:', error);
+        // Fallback - directly show login screen
+        document.getElementById('splash-screen').classList.remove('active');
+        document.getElementById('login-screen').classList.add('active');
+    }
 }
 
 // Load incidents from database
@@ -156,17 +186,29 @@ function setupEventListeners() {
 
     // Face capture
     document.getElementById('btn-take-photo').addEventListener('click', () => {
-        document.getElementById('face-file-input').click();
+        document.getElementById('face-camera-input').click();
     });
     document.getElementById('btn-choose-gallery').addEventListener('click', () => {
-        document.getElementById('face-file-input').click();
+        document.getElementById('face-gallery-input').click();
     });
-    document.getElementById('face-file-input').addEventListener('change', handleFaceUpload);
+    document.getElementById('face-camera-input').addEventListener('change', handleFaceUpload);
+    document.getElementById('face-gallery-input').addEventListener('change', handleFaceUpload);
     document.getElementById('btn-continue-face').addEventListener('click', handleFaceContinue);
 
     // Header
     document.getElementById('btn-menu').addEventListener('click', toggleDrawer);
     document.getElementById('btn-notifications').addEventListener('click', toggleNotifications);
+    document.getElementById('btn-close-notifications').addEventListener('click', toggleNotifications);
+    document.getElementById('notifications-overlay').addEventListener('click', toggleNotifications);
+
+    // Push to Talk
+    document.getElementById('btn-ptt').addEventListener('click', openPTTModal);
+    document.getElementById('btn-close-ptt-modal').addEventListener('click', closePTTModal);
+    document.getElementById('ptt-overlay').addEventListener('click', closePTTModal);
+    document.getElementById('btn-request-mic').addEventListener('click', requestMicrophonePermission);
+    document.getElementById('btn-close-mic-permission').addEventListener('click', closeMicPermissionModal);
+    document.getElementById('mic-permission-overlay').addEventListener('click', closeMicPermissionModal);
+    setupPTTButton();
 
     // Tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -323,7 +365,9 @@ async function handleLogin() {
     const phone = document.getElementById('phone-number').value;
     const countryCode = document.getElementById('country-code').value;
     
-    if (phone.length < 10) {
+    console.log('handleLogin called with phone:', phone, 'country:', countryCode);
+    
+    if (phone.length < 7) {
         alert('Please enter a valid mobile number');
         return;
     }
@@ -333,6 +377,8 @@ async function handleLogin() {
     const originalText = btnLogin.textContent;
     btnLogin.textContent = 'Sending OTP...';
     btnLogin.disabled = true;
+    
+    console.log('Sending OTP request to:', API_BASE_URL);
     
     try {
         // Send OTP via backend API
@@ -445,9 +491,20 @@ async function verifyOtp(otp) {
         
         if (data.success) {
             // OTP verified successfully
-            setTimeout(() => {
-                handleOtpComplete();
-            }, 300);
+            // Check if returning user
+            if (data.is_returning_user && data.user) {
+                // Returning user - load their data and skip registration
+                state.user = data.user;
+                localStorage.setItem('shomrim_user', JSON.stringify(data.user));
+                setTimeout(() => {
+                    showScreen('passcode-screen');
+                }, 300);
+            } else {
+                // New user - go to registration
+                setTimeout(() => {
+                    showScreen('registration-screen');
+                }, 300);
+            }
         } else {
             alert(data.error || 'Invalid OTP');
             // Clear OTP inputs
@@ -516,17 +573,11 @@ async function resendOtp() {
     }
 }
 
-// OTP Verification - Check if new or returning user
+// OTP Verification - No longer used (logic moved to verifyOtp function)
+// Kept for backward compatibility
 function handleOtpComplete() {
-    const savedUser = localStorage.getItem('shomrim_user');
-    if (savedUser) {
-        // Returning user - load their info and go to passcode
-        state.user = JSON.parse(savedUser);
-        showScreen('passcode-screen');
-    } else {
-        // New user - go to registration
-        showScreen('registration-screen');
-    }
+    // This function is now handled by verifyOtp directly
+    showScreen('registration-screen');
 }
 
 // Registration Handler
@@ -596,7 +647,26 @@ function handlePasscodeInput(num) {
                 if (state.passcode === state.confirmPasscode) {
                     localStorage.setItem('shomrim_passcode', state.passcode);
                     setTimeout(() => {
-                        showScreen('face-screen');
+                        // Check if user already has an avatar/face uploaded
+                        if (state.user && state.user.avatar) {
+                            // Returning user with face already uploaded - skip to main screen
+                            state.isLoggedIn = true;
+                            
+                            // Update drawer with user info
+                            const drawerName = document.querySelector('.drawer-user-name');
+                            const drawerEmail = document.querySelector('.drawer-user-email');
+                            if (drawerName) drawerName.textContent = state.user.name;
+                            if (drawerEmail) drawerEmail.textContent = state.user.email;
+                            
+                            // Update avatar displays
+                            updateAvatarDisplays(state.user.avatar);
+                            
+                            showScreen('main-screen');
+                            updateUI();
+                        } else {
+                            // New user without face - show face upload screen
+                            showScreen('face-screen');
+                        }
                     }, 300);
                 } else {
                     alert('Passcode does not match!');
@@ -737,7 +807,9 @@ function toggleDrawer() {
 // Notifications Toggle
 function toggleNotifications() {
     const panel = document.getElementById('notifications-panel');
+    const overlay = document.getElementById('notifications-overlay');
     panel.classList.toggle('active');
+    overlay.classList.toggle('active');
 }
 
 function clearNotifications() {
@@ -837,21 +909,38 @@ function handleDrawerNavigation(page) {
 }
 
 // Logout
-function handleLogout() {
-    if (confirm('Are you sure you want to logout?')) {
-        localStorage.removeItem('shomrim_user');
-        localStorage.removeItem('shomrim_passcode');
+async function handleLogout() {
+    const confirmed = await showShomrimConfirm('Are you sure you want to logout?');
+    if (confirmed) {
+        // Clear all user data
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Reset state
         state.isLoggedIn = false;
+        state.user = null;
         state.passcode = '';
         state.confirmPasscode = '';
         state.isConfirmingPasscode = false;
-        toggleDrawer();
-        showScreen('login-screen');
+        state.incidents = [];
+        state.notifications = [];
+        state.notificationCount = 0;
+        
+        // Close drawer if open
+        const drawer = document.querySelector('.drawer');
+        if (drawer && drawer.classList.contains('open')) {
+            toggleDrawer();
+        }
+        
+        // Go to login screen
+        setTimeout(() => {
+            showScreen('login-screen');
+        }, 300);
     }
 }
 
-function clearNotifications() {
-    if (!confirm('Are you sure you want to clear all notifications?')) return;
+async function clearNotifications() {
+    if (!await showShomrimConfirm('Are you sure you want to clear all notifications?')) return;
     
     state.notifications = [];
     state.notificationCount = 0;
@@ -1050,7 +1139,7 @@ async function handleIncidentAction(action) {
     
     switch (action) {
         case 'start':
-            confirmed = confirm('Are you sure you want to start this incident?');
+            confirmed = await showShomrimConfirm('Are you sure you want to start this incident?');
             if (confirmed) {
                 newStatus = 'started';
                 addIncidentHistory(incidentId, 'Started');
@@ -1059,7 +1148,7 @@ async function handleIncidentAction(action) {
             break;
             
         case 'complete':
-            confirmed = confirm('Are you sure you want to complete this incident?');
+            confirmed = await showShomrimConfirm('Are you sure you want to complete this incident?');
             if (confirmed) {
                 newStatus = 'completed';
                 addIncidentHistory(incidentId, 'Completed');
@@ -1068,7 +1157,7 @@ async function handleIncidentAction(action) {
             break;
             
         case 'cancel':
-            const reason = prompt('Please enter the reason for cancellation (minimum 10 words):');
+            const reason = await showShomrimPrompt('Please enter the reason for cancellation (minimum 10 words):');;
             if (reason && reason.split(/\s+/).length >= 10) {
                 confirmed = true;
                 newStatus = 'cancelled';
@@ -1088,7 +1177,7 @@ async function handleIncidentAction(action) {
             break;
             
         case 'reopen':
-            confirmed = confirm('Are you sure you want to reopen this incident?');
+            confirmed = await showShomrimConfirm('Are you sure you want to reopen this incident?');
             if (confirmed) {
                 newStatus = 'pending';
                 addIncidentHistory(incidentId, 'Reopened');
@@ -1101,7 +1190,7 @@ async function handleIncidentAction(action) {
             return;
             
         case 'accept':
-            confirmed = confirm('Do you want to accept this incident request?');
+            confirmed = await showShomrimConfirm('Do you want to accept this incident request?');
             if (confirmed) {
                 if (!incident.assignedUsers) incident.assignedUsers = [];
                 if (!incident.assignedUsers.includes(state.user.name)) {
@@ -1116,7 +1205,7 @@ async function handleIncidentAction(action) {
             break;
             
         case 'decline':
-            confirmed = confirm('Do you want to decline this incident request?');
+            confirmed = await showShomrimConfirm('Do you want to decline this incident request?');
             if (confirmed) {
                 if (incident.invitedUsers && incident.invitedUsers.includes(state.user.name)) {
                     incident.invitedUsers = incident.invitedUsers.filter(u => u !== state.user.name);
@@ -1668,7 +1757,7 @@ function updateDetailActionButtons(incident) {
 }
 
 async function addNoteToIncident(incidentId) {
-    const noteText = prompt('Enter your note (minimum 5 characters):');
+    const noteText = await showShomrimPrompt('Enter your note (minimum 5 characters):');;
     if (!noteText || noteText.trim().length < 5) {
         if (noteText !== null) {
             alert('Note must be at least 5 characters long');
@@ -1936,8 +2025,8 @@ function editContact(contactId) {
     alert('Edit contact functionality - Coming soon!');
 }
 
-function deleteContact(contactId) {
-    if (!confirm('Are you sure you want to delete this contact?')) return;
+async function deleteContact(contactId) {
+    if (!await showShomrimConfirm('Are you sure you want to delete this contact?')) return;
     
     state.contacts = state.contacts.filter(c => c.id !== contactId);
     saveState();
@@ -3035,8 +3124,8 @@ function togglePoliceSection() {
     section.style.display = section.style.display === 'none' ? 'block' : 'none';
 }
 
-function addVictim() {
-    const name = prompt('Enter victim name (minimum 2 characters):');
+async function addVictim() {
+    const name = await showShomrimPrompt('Enter victim name (minimum 2 characters):');;
     if (!name || name.trim().length < 2) {
         if (name !== null) {
             alert('Victim name must be at least 2 characters');
@@ -3073,8 +3162,8 @@ function removeVictim(index) {
     renderVictimsList();
 }
 
-function addWitness() {
-    const name = prompt('Enter witness name (minimum 2 characters):');
+async function addWitness() {
+    const name = await showShomrimPrompt('Enter witness name (minimum 2 characters):');;
     if (!name || name.trim().length < 2) {
         if (name !== null) {
             alert('Witness name must be at least 2 characters');
@@ -3111,8 +3200,8 @@ function removeWitness(index) {
     renderWitnessesList();
 }
 
-function addSuspectToIncident() {
-    const name = prompt('Enter suspect name (minimum 2 characters):');
+async function addSuspectToIncident() {
+    const name = await showShomrimPrompt('Enter suspect name (minimum 2 characters):');;
     if (!name || name.trim().length < 2) {
         if (name !== null) {
             alert('Suspect name must be at least 2 characters');
@@ -3276,3 +3365,466 @@ function formatPhoneNumber(phone) {
     }
     return phone;
 }
+
+
+// ===== CUSTOM SHOMRIM DIALOGS =====
+
+function showShomrimConfirm(message) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+        
+        overlay.innerHTML = `
+            <div style=\""background: white; padding: 24px; border-radius: 12px; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);\"">
+                <div style=\""display: flex; align-items: center; gap: 12px; margin-bottom: 16px;\"">
+                    <img src=\""assets/img/shomrim_logo.png\"" style=\""width: 40px; height: 40px; border-radius: 8px;\"">
+                    <h3 style=\""margin: 0; color: #1E88E5; font-size: 18px;\"">Shomrim App</h3>
+                </div>
+                <p style=\""margin: 0 0 24px 0; color: #333; font-size: 16px; line-height: 1.5;\"">{message}</p>
+                <div style=\""display: flex; gap: 12px; justify-content: flex-end;\"">
+                    <button onclick=\""this.closest('[data-overlay]').remove(); window.shomrimResolve(false)\"" style=\""padding: 10px 24px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;\"">Cancel</button>
+                    <button onclick=\""this.closest('[data-overlay]').remove(); window.shomrimResolve(true)\"" style=\""padding: 10px 24px; border: none; background: #1E88E5; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;\"">OK</button>
+                </div>
+            </div>
+        `;
+        
+        overlay.setAttribute('data-overlay', 'true');
+        document.body.appendChild(overlay);
+        
+        window.shomrimResolve = (result) => {
+            resolve(result);
+            delete window.shomrimResolve;
+        };
+    });
+}
+
+function showShomrimAlert(message) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+        
+        overlay.innerHTML = `
+            <div style=\""background: white; padding: 24px; border-radius: 12px; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);\"">
+                <div style=\""display: flex; align-items: center; gap: 12px; margin-bottom: 16px;\"">
+                    <img src=\""assets/img/shomrim_logo.png\"" style=\""width: 40px; height: 40px; border-radius: 8px;\"">
+                    <h3 style=\""margin: 0; color: #1E88E5; font-size: 18px;\"">Shomrim App</h3>
+                </div>
+                <p style=\""margin: 0 0 24px 0; color: #333; font-size: 16px; line-height: 1.5;\"">{message}</p>
+                <div style=\""display: flex; justify-content: flex-end;\"">
+                    <button onclick=\""this.closest('[data-overlay]').remove(); window.shomrimResolve(true)\"" style=\""padding: 10px 32px; border: none; background: #1E88E5; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;\"">OK</button>
+                </div>
+            </div>
+        `;
+        
+        overlay.setAttribute('data-overlay', 'true');
+        document.body.appendChild(overlay);
+        
+        window.shomrimResolve = (result) => {
+            resolve(result);
+            delete window.shomrimResolve;
+        };
+    });
+}
+
+function showShomrimPrompt(message, defaultValue = '') {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+        
+        overlay.innerHTML = `
+            <div style=\""background: white; padding: 24px; border-radius: 12px; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);\"">
+                <div style=\""display: flex; align-items: center; gap: 12px; margin-bottom: 16px;\"">
+                    <img src=\""assets/img/shomrim_logo.png\"" style=\""width: 40px; height: 40px; border-radius: 8px;\"">
+                    <h3 style=\""margin: 0; color: #1E88E5; font-size: 18px;\"">Shomrim App</h3>
+                </div>
+                <p style=\""margin: 0 0 16px 0; color: #333; font-size: 16px; line-height: 1.5;\"">{message}</p>
+                <input type=\""text\"" id=\""shomrim-prompt-input\"" value=\""{defaultValue}\"" style=\""width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 24px; box-sizing: border-box;\"">
+                <div style=\""display: flex; gap: 12px; justify-content: flex-end;\"">
+                    <button onclick=\""this.closest('[data-overlay]').remove(); window.shomrimResolve(null)\"" style=\""padding: 10px 24px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;\"">Cancel</button>
+                    <button onclick=\""const val = document.getElementById('shomrim-prompt-input').value; this.closest('[data-overlay]').remove(); window.shomrimResolve(val)\"" style=\""padding: 10px 24px; border: none; background: #1E88E5; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;\"">OK</button>
+                </div>
+            </div>
+        `;
+        
+        overlay.setAttribute('data-overlay', 'true');
+        document.body.appendChild(overlay);
+        
+        setTimeout(() => {
+            const input = document.getElementById('shomrim-prompt-input');
+            if (input) input.focus();
+        }, 100);
+        
+        window.shomrimResolve = (result) => {
+            resolve(result);
+            delete window.shomrimResolve;
+        };
+    });
+}
+
+// ===== Push to Talk (PTT) Functionality =====
+let pttMediaRecorder = null;
+let pttAudioChunks = [];
+let pttStream = null;
+let pttPollingInterval = null;
+let pttLastMessageId = 0;
+
+function openPTTModal() {
+    const modal = document.getElementById('ptt-modal');
+    const overlay = document.getElementById('ptt-overlay');
+    modal.classList.add('active');
+    overlay.classList.add('active');
+    loadPTTUsers();
+    startPTTPolling();
+    
+    // Automatically request microphone permission when opening PTT
+    requestMicrophonePermissionOnOpen();
+}
+
+async function requestMicrophonePermissionOnOpen() {
+    try {
+        // Pre-request microphone access so it's ready when user presses talk button
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                } 
+            });
+            
+            // Permission granted! Stop the stream for now (we'll request again when talking)
+            stream.getTracks().forEach(track => track.stop());
+            
+            console.log('✅ Microphone permission granted');
+            
+            // Show success feedback
+            const status = document.getElementById('ptt-status');
+            const statusText = status.querySelector('p');
+            const statusIcon = status.querySelector('.material-icons-round');
+            statusIcon.textContent = 'mic';
+            statusText.textContent = '✓ Microphone ready! Hold button to speak';
+            statusText.style.color = '#4CAF50';
+            
+            setTimeout(() => {
+                statusIcon.textContent = 'mic_off';
+                statusText.textContent = 'Hold button to speak';
+                statusText.style.color = '';
+            }, 2000);
+        }
+    } catch (error) {
+        console.log('⚠️ Microphone permission needed - will prompt when user clicks talk');
+        // Show modal to guide user
+        showMicPermissionModal(error);
+    }
+}
+
+function closePTTModal() {
+    const modal = document.getElementById('ptt-modal');
+    const overlay = document.getElementById('ptt-overlay');
+    modal.classList.remove('active');
+    overlay.classList.remove('active');
+    stopPTT();
+    stopPTTPolling();
+}
+
+function setupPTTButton() {
+    const talkButton = document.getElementById('ptt-talk-button');
+    
+    // Mouse events for desktop
+    talkButton.addEventListener('mousedown', startPTT);
+    talkButton.addEventListener('mouseup', stopPTT);
+    talkButton.addEventListener('mouseleave', stopPTT);
+    
+    // Touch events for mobile
+    talkButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startPTT();
+    });
+    talkButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        stopPTT();
+    });
+}
+
+async function startPTT() {
+    const talkButton = document.getElementById('ptt-talk-button');
+    const status = document.getElementById('ptt-status');
+    const statusIcon = status.querySelector('.material-icons-round');
+    const statusText = status.querySelector('p');
+    const channel = document.getElementById('ptt-channel-select').value;
+    
+    try {
+        // Check if getUserMedia is supported
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('Your browser does not support audio recording. Please use a modern browser like Chrome or Safari.');
+            return;
+        }
+
+        // Request microphone access
+        pttStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            } 
+        });
+        
+        // Create media recorder
+        pttMediaRecorder = new MediaRecorder(pttStream);
+        pttAudioChunks = [];
+        
+        pttMediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                pttAudioChunks.push(event.data);
+            }
+        };
+        
+        pttMediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(pttAudioChunks, { type: 'audio/webm' });
+            await sendPTTAudio(audioBlob, channel);
+        };
+        
+        // Start recording
+        pttMediaRecorder.start();
+        
+        // Update UI
+        talkButton.classList.add('recording');
+        status.classList.add('recording');
+        statusIcon.textContent = 'mic';
+        statusText.textContent = `Broadcasting to ${getChannelName(channel)}...`;
+        
+        // Haptic feedback if available
+        if (navigator.vibrate) {
+            navigator.vibrate(50);
+        }
+        
+    } catch (error) {
+        console.error('Error accessing microphone:', error);
+        showMicPermissionModal(error);
+    }
+}
+
+function showMicPermissionModal(error) {
+    const modal = document.getElementById('mic-permission-modal');
+    const overlay = document.getElementById('mic-permission-overlay');
+    modal.classList.add('active');
+    overlay.classList.add('active');
+}
+
+function closeMicPermissionModal() {
+    const modal = document.getElementById('mic-permission-modal');
+    const overlay = document.getElementById('mic-permission-overlay');
+    modal.classList.remove('active');
+    overlay.classList.remove('active');
+}
+
+async function requestMicrophonePermission() {
+    closeMicPermissionModal();
+    
+    // Wait a moment then try to start PTT again
+    setTimeout(() => {
+        startPTT();
+    }, 300);
+}
+
+function stopPTT() {
+    const talkButton = document.getElementById('ptt-talk-button');
+    const status = document.getElementById('ptt-status');
+    const statusIcon = status.querySelector('.material-icons-round');
+    const statusText = status.querySelector('p');
+    
+    if (pttMediaRecorder && pttMediaRecorder.state === 'recording') {
+        pttMediaRecorder.stop();
+        
+        // Stop all tracks
+        if (pttStream) {
+            pttStream.getTracks().forEach(track => track.stop());
+            pttStream = null;
+        }
+        
+        // Update UI
+        talkButton.classList.remove('recording');
+        status.classList.remove('recording');
+        statusIcon.textContent = 'mic_off';
+        statusText.textContent = 'Hold button to speak';
+        
+        // Haptic feedback if available
+        if (navigator.vibrate) {
+            navigator.vibrate(30);
+        }
+    }
+}
+
+async function sendPTTAudio(audioBlob, channel) {
+    try {
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'voice-message.webm');
+        formData.append('channel', channel);
+        formData.append('user_phone', state.user.phone || state.user.email);
+        formData.append('user_name', state.user.name);
+        
+        const response = await fetch(`${API_BASE_URL}/api/ptt/broadcast`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            console.log('✅ Voice message sent successfully');
+        } else {
+            console.error('❌ Failed to send voice message');
+        }
+    } catch (error) {
+        console.error('Error sending PTT audio:', error);
+    }
+}
+
+function getChannelName(channel) {
+    const channelNames = {
+        'all': 'All Units',
+        'dispatchers': 'Dispatchers',
+        'coordinators': 'Coordinators',
+        'on-duty': 'On Duty Members',
+        'on-patrol': 'On Patrol Members'
+    };
+    return channelNames[channel] || 'All Units';
+}
+
+async function loadPTTUsers() {
+    try {
+        const channel = document.getElementById('ptt-channel-select').value;
+        const response = await fetch(`${API_BASE_URL}/api/users/online?channel=${channel}`);
+        
+        if (response.ok) {
+            const users = await response.json();
+            console.log('📻 PTT Users loaded:', users);
+            displayPTTUsers(users);
+        } else {
+            console.error('Failed to load users, using fallback');
+            // Show all registered users as fallback
+            displayPTTUsers([]);
+        }
+    } catch (error) {
+        console.error('Error loading PTT users:', error);
+        displayPTTUsers([]);
+    }
+}
+
+function displayPTTUsers(users) {
+    const usersList = document.getElementById('ptt-users-list');
+    const userCount = document.getElementById('ptt-user-count');
+    
+    userCount.textContent = users.length;
+    
+    if (users.length === 0) {
+        usersList.innerHTML = '<p class="ptt-no-users">No users currently active</p>';
+        return;
+    }
+    
+    usersList.innerHTML = users.map(user => `
+        <div class="ptt-user-item">
+            <div class="ptt-user-avatar">${user.name.charAt(0)}</div>
+            <div class="ptt-user-info">
+                <span class="ptt-user-name">${user.name} (${user.callsign})</span>
+                <span class="ptt-user-status">${user.status}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// PTT Polling for incoming messages
+function startPTTPolling() {
+    // Clear any existing polling
+    stopPTTPolling();
+    
+    // Start polling every 2 seconds
+    pttPollingInterval = setInterval(checkForPTTMessages, 2000);
+    
+    // Check immediately
+    checkForPTTMessages();
+}
+
+function stopPTTPolling() {
+    if (pttPollingInterval) {
+        clearInterval(pttPollingInterval);
+        pttPollingInterval = null;
+    }
+}
+
+async function checkForPTTMessages() {
+    try {
+        const channel = document.getElementById('ptt-channel-select').value;
+        const response = await fetch(
+            `${API_BASE_URL}/api/ptt/messages?user_phone=${encodeURIComponent(state.user.phone || state.user.email)}&channel=${channel}&since_id=${pttLastMessageId}`
+        );
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            if (data.messages && data.messages.length > 0) {
+                console.log(`📻 Received ${data.messages.length} new PTT message(s)`);
+                
+                // Play each message
+                for (const message of data.messages) {
+                    await playPTTMessage(message);
+                    pttLastMessageId = Math.max(pttLastMessageId, message.id);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error checking for PTT messages:', error);
+    }
+}
+
+async function playPTTMessage(message) {
+    try {
+        // Show notification
+        const status = document.getElementById('ptt-status');
+        const statusIcon = status.querySelector('.material-icons-round');
+        const statusText = status.querySelector('p');
+        
+        statusIcon.textContent = 'volume_up';
+        statusText.textContent = `Receiving from ${message.user_name}...`;
+        status.style.background = '#E3F2FD';
+        
+        // Fetch and play audio
+        const audioResponse = await fetch(`${API_BASE_URL}/api/ptt/audio/${message.id}`);
+        const audioBlob = await audioResponse.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        const audio = new Audio(audioUrl);
+        
+        // Haptic feedback
+        if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+        }
+        
+        // Play audio
+        await audio.play();
+        
+        // Wait for audio to finish
+        await new Promise((resolve) => {
+            audio.onended = resolve;
+        });
+        
+        // Clean up
+        URL.revokeObjectURL(audioUrl);
+        
+        // Reset status
+        statusIcon.textContent = 'mic_off';
+        statusText.textContent = 'Hold button to speak';
+        status.style.background = '';
+        
+        console.log(`✅ Played message from ${message.user_name}`);
+        
+    } catch (error) {
+        console.error('Error playing PTT message:', error);
+    }
+}
+
+// Update PTT users when channel changes
+document.addEventListener('DOMContentLoaded', () => {
+    const channelSelect = document.getElementById('ptt-channel-select');
+    if (channelSelect) {
+        channelSelect.addEventListener('change', loadPTTUsers);
+    }
+});
