@@ -19,9 +19,7 @@ TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', 'YOUR_TWILIO_PHONE_H
 # In-memory OTP storage (in production, use Redis or database)
 otp_storage = {}
 
-# PTT message storage (in production, use Redis or database with expiry)
-ptt_messages = []
-ptt_message_id_counter = 0
+# PTT now uses database instead of memory
 
 # Serve frontend files
 @app.route('/')
@@ -794,7 +792,6 @@ def delete_vehicle(vehicle_id):
 @app.route('/api/ptt/broadcast', methods=['POST'])
 def ptt_broadcast():
     """Handle PTT voice message broadcast"""
-    global ptt_message_id_counter
     try:
         audio_file = request.files.get('audio')
         channel = request.form.get('channel', 'all')
@@ -804,38 +801,45 @@ def ptt_broadcast():
         if not audio_file:
             return jsonify({'error': 'No audio file provided'}), 400
         
-        # Read and store audio data
+        # Read audio data
         audio_data = audio_file.read()
+        content_type = audio_file.content_type or 'audio/webm'
         
-        # Create message object
-        ptt_message_id_counter += 1
-        message = {
-            'id': ptt_message_id_counter,
-            'channel': channel,
-            'user_phone': user_phone,
-            'user_name': user_name,
-            'audio_data': audio_data,
-            'timestamp': datetime.now().isoformat(),
-            'content_type': audio_file.content_type or 'audio/webm'
-        }
+        # Store in database
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO ptt_messages (user_phone, user_name, channel, audio_data, content_type)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_phone, user_name, channel, audio_data, content_type))
         
-        # Store message (keep last 50 messages)
-        ptt_messages.append(message)
-        if len(ptt_messages) > 50:
-            ptt_messages.pop(0)
+        message_id = cursor.lastrowid
+        
+        # Clean up old messages (keep last 50)
+        cursor.execute('''
+            DELETE FROM ptt_messages 
+            WHERE id NOT IN (
+                SELECT id FROM ptt_messages 
+                ORDER BY created_at DESC 
+                LIMIT 50
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
         
         print(f"\n{'='*50}")
         print(f"PTT BROADCAST - User: {user_name}")
         print(f"PTT BROADCAST - Channel: {channel}")
         print(f"PTT BROADCAST - Audio size: {len(audio_data)} bytes")
-        print(f"PTT BROADCAST - Message ID: {ptt_message_id_counter}")
+        print(f"PTT BROADCAST - Message ID: {message_id}")
         print(f"{'='*50}\n")
         
         return jsonify({
             'success': True,
             'message': 'Voice message broadcast to channel',
             'channel': channel,
-            'message_id': ptt_message_id_counter
+            'message_id': message_id
         })
         
     except Exception as e:
@@ -889,27 +893,34 @@ def get_ptt_messages():
         channel = request.args.get('channel', 'all')
         since_id = int(request.args.get('since_id', 0))
         
-        # Filter messages for this channel and after since_id
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Query messages newer than since_id, excluding user's own messages
+        cursor.execute('''
+            SELECT id, user_name, channel, created_at
+            FROM ptt_messages
+            WHERE id > ? AND user_phone != ? AND (channel = ? OR channel = 'all')
+            ORDER BY id
+        ''', (since_id, user_phone, channel))
+        
         new_messages = []
-        for msg in ptt_messages:
-            # Skip own messages
-            if msg['user_phone'] == user_phone:
-                continue
-            
-            # Only messages after since_id
-            if msg['id'] <= since_id:
-                continue
-            
-            # Filter by channel
-            if channel != 'all' and msg['channel'] != channel:
-                continue
-            
+        for row in cursor.fetchall():
             new_messages.append({
-                'id': msg['id'],
-                'user_name': msg['user_name'],
-                'channel': msg['channel'],
-                'timestamp': msg['timestamp']
+                'id': row[0],
+                'user_name': row[1],
+                'channel': row[2],
+                'timestamp': row[3]
             })
+        
+        conn.close()
+        
+        if new_messages:
+            print(f"\n{'='*50}")
+            print(f"PTT POLLING - Found {len(new_messages)} new messages")
+            print(f"PTT POLLING - Channel: {channel}")
+            print(f"PTT POLLING - Since ID: {since_id}")
+            print(f"{'='*50}\n")
         
         return jsonify({
             'messages': new_messages,
@@ -923,21 +934,30 @@ def get_ptt_messages():
 def get_ptt_audio(message_id):
     """Get audio data for a specific PTT message"""
     try:
-        # Find the message
-        message = None
-        for msg in ptt_messages:
-            if msg['id'] == message_id:
-                message = msg
-                break
+        conn = get_db()
+        cursor = conn.cursor()
         
-        if not message:
+        # Query the message
+        cursor.execute('''
+            SELECT audio_data, content_type
+            FROM ptt_messages
+            WHERE id = ?
+        ''', (message_id,))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if not row:
             return jsonify({'error': 'Message not found'}), 404
+        
+        audio_data = row[0]
+        content_type = row[1]
         
         # Return audio data
         from flask import Response
         return Response(
-            message['audio_data'],
-            mimetype=message['content_type'],
+            audio_data,
+            mimetype=content_type,
             headers={
                 'Content-Disposition': f'inline; filename=ptt_{message_id}.webm',
                 'Cache-Control': 'no-cache'

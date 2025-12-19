@@ -215,6 +215,26 @@ def init_db():
         )
     ''')
     
+    # PTT messages table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ptt_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_phone TEXT NOT NULL,
+            user_name TEXT NOT NULL,
+            channel TEXT NOT NULL,
+            audio_data BLOB NOT NULL,
+            content_type TEXT DEFAULT 'audio/webm',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_phone) REFERENCES users(phone)
+        )
+    ''')
+    
+    # Create index for faster queries
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_ptt_created_at 
+        ON ptt_messages(created_at DESC)
+    ''')
+    
     conn.commit()
     conn.close()
     print("✅ Database initialized successfully!")
