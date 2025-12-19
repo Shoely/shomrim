@@ -12,7 +12,11 @@ app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for all API endpoints
 
 # Initialize database on startup
-init_db()
+try:
+    init_db()
+    print("✅ Database initialized successfully")
+except Exception as e:
+    print(f"⚠️ Database init error: {e}")
 
 # Twilio configuration - Get these from https://www.twilio.com/console
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', 'YOUR_ACCOUNT_SID_HERE')
@@ -461,7 +465,28 @@ def delete_contact(contact_id):
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'service': 'Shomrim OTP API'})
+    try:
+        # Test database connection
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM users")
+        user_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM ptt_messages")
+        ptt_count = cursor.fetchone()[0]
+        conn.close()
+        
+        return jsonify({
+            'status': 'healthy',
+            'service': 'Shomrim API',
+            'database': 'connected',
+            'users': user_count,
+            'ptt_messages': ptt_count
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e)
+        }), 500
 
 # Duty/Patrol Status Endpoints
 @app.route('/api/users/<phone>/duty-status', methods=['PUT'])
@@ -801,12 +826,19 @@ def ptt_broadcast():
         user_phone = request.form.get('user_phone')
         user_name = request.form.get('user_name')
         
+        print(f"\n{'='*50}")
+        print(f"PTT BROADCAST RECEIVED")
+        print(f"  User: {user_name} ({user_phone})")
+        print(f"  Channel: {channel}")
+        
         if not audio_file:
+            print("  ERROR: No audio file!")
             return jsonify({'error': 'No audio file provided'}), 400
         
         # Read audio data
         audio_data = audio_file.read()
         content_type = audio_file.content_type or 'audio/webm'
+        print(f"  Audio size: {len(audio_data)} bytes")
         
         # Store in database
         conn = get_db()
@@ -817,6 +849,7 @@ def ptt_broadcast():
         ''', (user_phone, user_name, channel, audio_data, content_type))
         
         message_id = cursor.lastrowid
+        print(f"  Saved with ID: {message_id}")
         
         # Clean up old messages (keep last 50)
         cursor.execute('''
@@ -831,11 +864,7 @@ def ptt_broadcast():
         conn.commit()
         conn.close()
         
-        print(f"\n{'='*50}")
-        print(f"PTT BROADCAST - User: {user_name}")
-        print(f"PTT BROADCAST - Channel: {channel}")
-        print(f"PTT BROADCAST - Audio size: {len(audio_data)} bytes")
-        print(f"PTT BROADCAST - Message ID: {message_id}")
+        print(f"  SUCCESS!")
         print(f"{'='*50}\n")
         
         return jsonify({
@@ -846,6 +875,9 @@ def ptt_broadcast():
         })
         
     except Exception as e:
+        import traceback
+        print(f"  BROADCAST ERROR: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/users/online', methods=['GET'])
@@ -853,6 +885,7 @@ def get_online_users():
     """Get list of online users for PTT"""
     try:
         channel = request.args.get('channel', 'all')
+        print(f"\n📻 Getting users for channel: {channel}")
         
         conn = get_db()
         cursor = conn.cursor()
@@ -878,17 +911,21 @@ def get_online_users():
             user_data = {
                 'name': user[0] if user[0] else 'Unknown',
                 'phone': user[1] if user[1] else '',
-                'callsign': user[2] if user[2] else user[1][-4:] if user[1] else 'N/A',
+                'callsign': user[2] if user[2] else (user[1][-4:] if user[1] else 'N/A'),
                 'status': user[3] if user[3] else 'Member'
             }
             result.append(user_data)
-            print(f"   User: {user_data['name']} ({user_data['callsign']}) - {user_data['status']}")
         
-        print(f"\n📻 PTT Users query - Channel: {channel}, Found: {len(result)} users")
+        print(f"📻 Found {len(result)} users")
+        for u in result:
+            print(f"   - {u['name']} ({u['callsign']})")
         
         return jsonify(result)
         
     except Exception as e:
+        import traceback
+        print(f"❌ Error in get_online_users: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/ptt/messages', methods=['GET'])
