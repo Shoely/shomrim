@@ -7,32 +7,11 @@ import os
 from datetime import datetime, timedelta
 import json
 import threading
-import requests
 import time
 from database import get_db, row_to_dict, rows_to_list, init_db
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for all API endpoints
-
-# ============ KEEP-ALIVE PING TO PREVENT RENDER COLD STARTS ============
-def keep_alive():
-    """Ping the server every 14 minutes to prevent Render from sleeping"""
-    RENDER_URL = os.environ.get('RENDER_EXTERNAL_URL', '')
-    while True:
-        time.sleep(840)  # 14 minutes
-        if RENDER_URL:
-            try:
-                requests.get(f"{RENDER_URL}/api/health", timeout=30)
-                print(f"✅ Keep-alive ping sent at {datetime.now()}")
-            except Exception as e:
-                print(f"⚠️ Keep-alive ping failed: {e}")
-
-# Start keep-alive thread in production
-if os.environ.get('RENDER'):
-    keep_alive_thread = threading.Thread(target=keep_alive, daemon=True)
-    keep_alive_thread.start()
-    print("✅ Keep-alive thread started")
-# ========================================================================
 
 # Initialize database on startup
 try:
