@@ -30,8 +30,27 @@
     <link rel="stylesheet" href="css/app.css?v=1.1.0">
 </head>
 <body>
+    <!-- Site Password Gate -->
+    <div id="site-password-screen" class="screen active">
+        <div class="password-gate-container">
+            <div class="password-gate-logo">
+                <img src="assets/img/shomrim_logo.png" alt="Shomrim" onerror="this.style.display='none';">
+            </div>
+            <h2>Shomrim</h2>
+            <p>Enter site password to continue</p>
+            <div class="password-gate-input">
+                <input type="password" id="site-password-input" placeholder="Enter password" autocomplete="off">
+            </div>
+            <button class="password-gate-btn" onclick="checkSitePassword()">
+                <span class="material-icons-round">lock_open</span>
+                Enter
+            </button>
+            <p class="password-error" id="password-error" style="display: none;">Incorrect password</p>
+        </div>
+    </div>
+
     <!-- Splash Screen -->
-    <div id="splash-screen" class="screen active">
+    <div id="splash-screen" class="screen">
         <div class="splash-content">
             <div class="splash-logo">
                 <img src="assets/img/shomrim_logo.png" alt="Shomrim" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">

@@ -3,7 +3,61 @@
 // API Configuration - Auto-detect server URL
 const API_BASE_URL = window.location.origin;
 
+// Site password (in production, this should be server-validated)
+const SITE_PASSWORD = 'test123';
+
 console.log('API Base URL:', API_BASE_URL);
+
+// Check if user already passed the password gate
+function checkSiteAccess() {
+    const hasAccess = sessionStorage.getItem('shomrim_site_access');
+    if (hasAccess === 'granted') {
+        document.getElementById('site-password-screen').classList.remove('active');
+        document.getElementById('splash-screen').classList.add('active');
+        initApp();
+    }
+}
+
+// Site password check function
+function checkSitePassword() {
+    const passwordInput = document.getElementById('site-password-input');
+    const errorMsg = document.getElementById('password-error');
+    const enteredPassword = passwordInput.value;
+    
+    if (enteredPassword === SITE_PASSWORD) {
+        // Grant access
+        sessionStorage.setItem('shomrim_site_access', 'granted');
+        document.getElementById('site-password-screen').classList.remove('active');
+        document.getElementById('splash-screen').classList.add('active');
+        initApp();
+    } else {
+        // Show error
+        errorMsg.style.display = 'block';
+        passwordInput.value = '';
+        passwordInput.focus();
+        
+        // Shake animation
+        passwordInput.style.animation = 'shake 0.5s';
+        setTimeout(() => {
+            passwordInput.style.animation = '';
+        }, 500);
+    }
+}
+
+// Allow Enter key to submit password
+document.addEventListener('DOMContentLoaded', () => {
+    const passwordInput = document.getElementById('site-password-input');
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                checkSitePassword();
+            }
+        });
+    }
+    
+    // Check if already has access
+    checkSiteAccess();
+});
 
 // App State
 const state = {
@@ -72,7 +126,14 @@ const screens = {
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
-    initApp();
+    // Don't auto-init if password gate is active - checkSiteAccess handles it
+    const hasAccess = sessionStorage.getItem('shomrim_site_access');
+    if (hasAccess === 'granted') {
+        // Already has access, init normally
+        initApp();
+    }
+    // Otherwise, wait for password to be entered
+    
     setupEventListeners();
     loadSampleData();
     

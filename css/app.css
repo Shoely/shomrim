@@ -77,6 +77,89 @@ body {
     display: flex;
 }
 
+/* ===== Site Password Gate ===== */
+#site-password-screen {
+    background: linear-gradient(135deg, #1E88E5 0%, #1565C0 100%);
+    justify-content: center;
+    align-items: center;
+}
+
+.password-gate-container {
+    text-align: center;
+    padding: 40px;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.password-gate-logo img {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20px;
+}
+
+.password-gate-container h2 {
+    color: white;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.password-gate-container p {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    margin-bottom: 24px;
+}
+
+.password-gate-input {
+    margin-bottom: 16px;
+}
+
+.password-gate-input input {
+    width: 100%;
+    max-width: 280px;
+    padding: 16px 20px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.password-gate-input input:focus {
+    outline: none;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.password-gate-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 32px;
+    border: none;
+    border-radius: 12px;
+    background: white;
+    color: var(--primary-blue);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.password-gate-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.password-gate-btn:active {
+    transform: scale(0.98);
+}
+
+.password-error {
+    color: #ffcdd2 !important;
+    font-size: 14px;
+    margin-top: 16px;
+}
+
 /* ===== Splash Screen ===== */
 #splash-screen {
     background: linear-gradient(135deg, #1E88E5 0%, #1565C0 100%);
@@ -126,6 +209,14 @@ body {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); }
+    60% { transform: translateX(-10px); }
+    80% { transform: translateX(10px); }
 }
 
 /* ===== Login Screen ===== */
