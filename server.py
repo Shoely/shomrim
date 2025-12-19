@@ -107,21 +107,19 @@ def verify_otp():
         # Format phone number
         full_phone = f"{country_code}{phone_number}"
         
-        # Debug logging
-        print(f"\n{'='*50}")
-        print(f"VERIFY OTP - Phone: {full_phone}")
-        print(f"VERIFY OTP - Entered: '{entered_otp}' (type: {type(entered_otp)})")
-        print(f"VERIFY OTP - Storage keys: {list(otp_storage.keys())}")
-        if full_phone in otp_storage:
-            print(f"VERIFY OTP - Stored: '{otp_storage[full_phone]['otp']}' (type: {type(otp_storage[full_phone]['otp'])})")
-            print(f"VERIFY OTP - Match: {stored_data['otp'] == entered_otp}")
-        print(f"{'='*50}\n")
-        
         # Check if OTP exists
         if full_phone not in otp_storage:
             return jsonify({'error': 'No OTP found for this number'}), 404
         
         stored_data = otp_storage[full_phone]
+        
+        # Debug logging
+        print(f"\n{'='*50}")
+        print(f"VERIFY OTP - Phone: {full_phone}")
+        print(f"VERIFY OTP - Entered: '{entered_otp}' (type: {type(entered_otp)})")
+        print(f"VERIFY OTP - Stored: '{stored_data['otp']}' (type: {type(stored_data['otp'])})")
+        print(f"VERIFY OTP - Match: {str(stored_data['otp']).strip() == str(entered_otp).strip()}")
+        print(f"{'='*50}\n")
         
         # Check if OTP expired
         if datetime.now() > stored_data['expiry']:
