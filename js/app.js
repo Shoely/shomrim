@@ -3747,17 +3747,25 @@ function displayPTTUsers(users) {
     userCount.textContent = users.length;
     
     if (users.length === 0) {
-        usersList.innerHTML = '<p class="ptt-no-users">No users currently active</p>';
+        usersList.innerHTML = '<p class="ptt-no-users">No users signed up yet</p>';
         return;
     }
     
-    usersList.innerHTML = users.map(user => `
-        <div class="ptt-user-item">
-            <div class="ptt-user-avatar">${user.name.charAt(0)}</div>
+    // Current user's phone for highlighting
+    const currentUserPhone = state.user?.phone || state.user?.email || '';
+    
+    usersList.innerHTML = users.map(user => {
+        const isCurrentUser = user.phone === currentUserPhone;
+        return `
+        <div class="ptt-user-item ${isCurrentUser ? 'current-user' : ''}">
+            <div class="ptt-user-avatar">${user.name ? user.name.charAt(0).toUpperCase() : '?'}</div>
             <div class="ptt-user-info">
-                <span class="ptt-user-name">${user.name} (${user.callsign})</span>
-                <span class="ptt-user-status">${user.status}</span>
+                <span class="ptt-user-name">${user.name || 'Unknown'} (${user.callsign || 'N/A'})${isCurrentUser ? ' (You)' : ''}</span>
+                <span class="ptt-user-status">${user.status || 'Member'}</span>
             </div>
+            <span class="ptt-user-online-dot" title="Signed up"></span>
+        </div>`;
+    }).join('');
         </div>
     `).join('');
 }
