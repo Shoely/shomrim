@@ -28,12 +28,6 @@ otp_storage = {}
 
 # PTT now uses database instead of memory
 
-# Health check endpoint for keep-alive pings
-@app.route('/api/health')
-def health_check():
-    """Health check endpoint - keeps server alive on Render"""
-    return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
-
 # Serve frontend files
 @app.route('/')
 def serve_index():
